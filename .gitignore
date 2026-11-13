@@ -1,0 +1,13 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.local
+.env*.local
+dist/
+coverage/
+*.tsbuildinfo
+supabase/.branches
+supabase/.temp
+supabase/.env
+qa/screenshots/tmp/
