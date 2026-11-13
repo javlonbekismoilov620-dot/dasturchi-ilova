@@ -43,7 +43,7 @@ function Inline({ tokens, theme, base }: { tokens: Token[]; theme: Theme; base?:
       case 'codespan':
         return (
           <RNText key={i} style={{ fontFamily: theme.fonts.mono, fontSize: (base?.fontSize ?? 16) * 0.88, color: theme.colors.accent, backgroundColor: theme.colors.accentSoft }}>
-            {` ${decode((tk as Tokens.Codespan).text)} `}
+            {`\u00A0${decode((tk as Tokens.Codespan).text).replace(/ /g, '\u00A0')}\u00A0`}
           </RNText>
         );
       case 'link': {

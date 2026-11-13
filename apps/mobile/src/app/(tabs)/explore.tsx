@@ -68,7 +68,7 @@ export default function Explore() {
             returnKeyType="search"
             autoCorrect={false}
             accessibilityLabel={tr('explore.searchPlaceholder')}
-            style={[t.typography.body, { flex: 1, color: t.colors.text, height: 48 }]}
+            style={[t.typography.body, { flex: 1, color: t.colors.text, height: 48, outlineStyle: 'none' as never }]}
             testID="explore-search"
           />
           {!!input && (

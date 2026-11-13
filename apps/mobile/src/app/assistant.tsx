@@ -82,7 +82,7 @@ export default function Assistant() {
             editable={enabled && !busy}
             placeholder={tr('assistant.placeholder')}
             placeholderTextColor={t.colors.textTertiary}
-            style={[t.typography.body, { flex: 1, color: t.colors.text, maxHeight: 120 }]}
+            style={[t.typography.body, { flex: 1, color: t.colors.text, maxHeight: 120, outlineStyle: 'none' as never }]}
             multiline
             accessibilityLabel={tr('assistant.placeholder')}
           />

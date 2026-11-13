@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Bell, Flame, Sparkles, Zap } from 'lucide-react-native';
 import { useMemo } from 'react';
@@ -80,7 +81,12 @@ function GoalCard() {
   const t = useTheme();
   const { t: tr, number } = useI18n();
   const { data: stats, isLoading } = useStats();
-  if (isLoading || !stats) return <Skeleton height={112} radius={t.radii.xl} style={{ marginHorizontal: t.spacing.gutter, width: undefined }} />;
+  if (isLoading || !stats)
+    return (
+      <View style={{ paddingHorizontal: t.spacing.gutter }}>
+        <Skeleton height={112} radius={t.radii.xl} />
+      </View>
+    );
   const goal = stats.daily_goal_minutes;
   const done = Math.floor(stats.today_seconds / 60);
   const ratio = goal ? done / goal : 0;
@@ -139,7 +145,7 @@ export default function Home() {
   const unread = notifications.data?.filter((n) => !n.read).length ?? 0;
 
   const active = enrollments.data?.find((e) => e.status === 'active');
-  const name = profile.data?.display_name?.split(' ')[0] ?? tr('home.guestName');
+  const name = signedIn ? profile.data?.display_name?.split(' ')[0] ?? tr('home.guestName') : tr('home.welcomeGuest');
   const tileWidth = Math.min((Math.min(width, 760) - t.spacing.gutter * 2 - 12) / 2, 340);
   const refreshing = recommended.isRefetching || enrollments.isRefetching;
 
@@ -156,6 +162,7 @@ export default function Home() {
       hero={() => (
         <View style={[styles.hero, { paddingTop: insets.top + 64 }]}>
           <Aurora hue={38} intensity={0.55} />
+          <LinearGradient pointerEvents="none" colors={['transparent', t.colors.background]} style={styles.heroFade} />
           <View style={{ paddingHorizontal: t.spacing.gutter, gap: 4 }}>
             <Text variant="overline" tone="accent">
               {tr(greetingKey())}
@@ -280,6 +287,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   hero: { paddingBottom: 20, overflow: 'hidden' },
+  heroFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 90 },
   goal: { flexDirection: 'row', alignItems: 'center', gap: 18, padding: 18 },
   statsRow: { flexDirection: 'row', gap: 16, marginTop: 6 },
   stat: { flexDirection: 'row', alignItems: 'center', gap: 5 },

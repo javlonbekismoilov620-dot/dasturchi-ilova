@@ -25,14 +25,18 @@ export default function PathScreen() {
 
   return (
     <ScrollScreen back title={p?.title ?? ''}>
-      {path.isLoading && <Skeleton height={200} radius={t.radii.xl} style={{ marginHorizontal: t.spacing.gutter, width: undefined }} />}
+      {path.isLoading && (
+        <View style={{ paddingHorizontal: t.spacing.gutter }}>
+          <Skeleton height={200} radius={t.radii.xl} />
+        </View>
+      )}
       {!path.isLoading && !p && <ErrorState message={tr('errors.notFound')} onRetry={() => path.refetch()} />}
       {p && (
         <>
           <View style={{ paddingHorizontal: t.spacing.gutter }}>
             <CourseCover id={`ph${p.id}`} coverStyle={p.cover_style} radius={t.radii.xl} style={{ height: Math.min(width * 0.5, 260) }}>
               <View style={styles.coverBody}>
-                <Badge label={`${tr(`levels.${p.level_from}`)} → ${tr(`levels.${p.level_to}`)}`} tone="custom" color="#FFFFFF" />
+                <Badge label={`${tr(`levels.${p.level_from}`)} → ${tr(`levels.${p.level_to}`)}`} tone="cover" />
                 <Text variant="title2" color="#FFFFFF">
                   {p.subtitle}
                 </Text>

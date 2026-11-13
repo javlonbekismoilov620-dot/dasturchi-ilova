@@ -134,6 +134,7 @@ const uz: Dictionary = {
     morning: 'Xayrli tong',
     afternoon: 'Xayrli kun',
     evening: 'Xayrli kech',
+    welcomeGuest: 'Xush kelibsiz',
     guestName: 'oʻquvchi',
     continueLearning: 'Oʻqishni davom ettiring',
     resume: 'Davom etish',

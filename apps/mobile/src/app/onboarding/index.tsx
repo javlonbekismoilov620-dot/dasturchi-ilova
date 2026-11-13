@@ -35,10 +35,11 @@ export default function Welcome() {
   const { width } = useWindowDimensions();
   const [index, setIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
-  const onViewable = useRef(({ viewableItems }: { viewableItems: { index?: number | null }[] }) => {
-    if (viewableItems[0]?.index != null) setIndex(viewableItems[0].index);
-  }).current;
   const last = index === SLIDES.length - 1;
+  const goTo = (i: number) => {
+    setIndex(i);
+    listRef.current?.scrollToOffset({ offset: i * width, animated: !t.reduceMotion });
+  };
 
   return (
     <View style={[styles.flex, { backgroundColor: t.colors.background }]}>
@@ -53,8 +54,8 @@ export default function Welcome() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(s) => s.title}
-        onViewableItemsChanged={onViewable}
-        viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
+        getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+        onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item, index: i }) => (
           <View style={[styles.slide, { width }]}>
             <View style={styles.vignette}>
@@ -82,7 +83,7 @@ export default function Welcome() {
           title={last ? tr('onboarding.getStarted') : tr('common.next')}
           size="lg"
           fullWidth
-          onPress={() => (last ? router.push('/onboarding/interests') : listRef.current?.scrollToIndex({ index: index + 1, animated: !t.reduceMotion }))}
+          onPress={() => (last ? router.push('/onboarding/interests') : goTo(index + 1))}
         />
         {!isDemoMode && <Button title={tr('onboarding.haveAccount')} variant="ghost" onPress={() => router.push('/auth')} fullWidth />}
       </View>

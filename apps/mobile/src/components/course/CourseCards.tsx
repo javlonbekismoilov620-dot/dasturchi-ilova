@@ -49,11 +49,11 @@ export const CourseCard = memo(function CourseCard({ course, enrollment, width =
         <CourseCover id={course.id} coverStyle={course.cover_style} categoryColor={course.category?.color} coverPath={course.cover_path} style={{ width, height: width * 0.62 }}>
           <View style={styles.coverBadges}>
             {course.access_tier === 'premium' ? (
-              <Badge label={tr('common.premium')} icon={Crown} tone="accent" />
+              <Badge label={tr('common.premium')} icon={Crown} tone="coverAccent" />
             ) : (
-              <Badge label={tr('common.free')} tone="custom" color="#FFFFFF" />
+              <Badge label={tr('common.free')} tone="cover" />
             )}
-            {!course.content_complete && <Badge label={tr('course.inDevelopment')} icon={Hammer} tone="custom" color="#FFFFFF" />}
+            {!course.content_complete && <Badge label={tr('course.inDevelopment')} icon={Hammer} tone="cover" />}
           </View>
           <View style={[styles.coverIcon, { backgroundColor: withAlpha('#000000', 0.28), borderColor: withAlpha('#FFFFFF', 0.14) }]}>
             <DynamicIcon name={course.category?.icon} size={16} color="#FFFFFF" />
@@ -197,8 +197,8 @@ export function PathCard({ path, width = 300 }: { path: LearningPath; width?: nu
       <CourseCover id={`p${path.id}`} coverStyle={path.cover_style} radius={t.radii.xl} style={{ width, height: 168 }}>
         <View style={styles.pathBody}>
           <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Badge label={`${tr(`levels.${path.level_from}`)} → ${tr(`levels.${path.level_to}`)}`} tone="custom" color="#FFFFFF" />
-            {path.access_tier === 'premium' && <Badge label={tr('common.premium')} icon={Crown} tone="accent" />}
+            <Badge label={`${tr(`levels.${path.level_from}`)} → ${tr(`levels.${path.level_to}`)}`} tone="cover" />
+            {path.access_tier === 'premium' && <Badge label={tr('common.premium')} icon={Crown} tone="coverAccent" />}
           </View>
           <View style={{ gap: 4 }}>
             <Text variant="title2" color="#FFFFFF" numberOfLines={1}>

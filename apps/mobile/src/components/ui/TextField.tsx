@@ -55,7 +55,7 @@ export function TextField({ label, hint, error, icon: Icon, secureToggle, secure
           }}
           style={[
             t.typography.body,
-            { flex: 1, color: t.colors.text, paddingVertical: 14, minHeight: multilineHeight, textAlignVertical: multilineHeight ? 'top' : 'center' },
+            { flex: 1, color: t.colors.text, paddingVertical: 14, outlineStyle: 'none' as never, minHeight: multilineHeight, textAlignVertical: multilineHeight ? 'top' : 'center' },
             style,
           ]}
         />

@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Award, Bell, BookOpen, ChevronRight, Clock, Crown, Flame, MessageCircle, Settings, Target, Trophy, Zap } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
@@ -87,6 +88,7 @@ export default function Profile() {
       hero={() => (
         <View style={[styles.hero, { paddingTop: insets.top + 64 }]}>
           <Aurora hue={38} intensity={0.6} />
+          <LinearGradient pointerEvents="none" colors={['transparent', t.colors.background]} style={styles.heroFade} />
           <View style={[styles.avatar, { backgroundColor: t.colors.accentSoft, borderColor: t.colors.accent }]}>
             <Text variant="display" tone="accent">
               {name.charAt(0).toUpperCase()}
@@ -197,6 +199,7 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 8, paddingBottom: 24, overflow: 'hidden' },
+  heroFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 110 },
   avatar: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 2, marginBottom: 6 },
   premium: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1 },
   premiumCta: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderWidth: 1 },

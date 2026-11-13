@@ -46,7 +46,7 @@ export function Card({ children, style, padded = true, elevated = false }: { chi
 // ---------------------------------------------------------------------------
 // Badge
 // ---------------------------------------------------------------------------
-type BadgeTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'custom';
+type BadgeTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'custom' | 'cover' | 'coverAccent';
 
 export function Badge({ label, tone = 'neutral', icon: Icon, color, solid = false }: { label: string; tone?: BadgeTone; icon?: LucideIcon; color?: string; solid?: boolean }) {
   const t = useTheme();
@@ -59,6 +59,9 @@ export function Badge({ label, tone = 'neutral', icon: Icon, color, solid = fals
     danger: [c.dangerSoft, c.danger],
     info: [c.infoSoft, c.info],
     custom: [withAlpha(color ?? c.accent, 0.16), color ?? c.accent],
+    // On generative covers (always dark artwork) — independent of the app theme.
+    cover: ['rgba(8,9,12,0.55)', '#FFFFFF'],
+    coverAccent: ['rgba(8,9,12,0.62)', '#F2D49B'],
   } as const;
   const [bg, fg] = map[tone];
   return (

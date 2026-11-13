@@ -133,6 +133,7 @@ const ru: Dictionary = {
     morning: 'Доброе утро',
     afternoon: 'Добрый день',
     evening: 'Добрый вечер',
+    welcomeGuest: 'Добро пожаловать',
     guestName: 'ученик',
     continueLearning: 'Продолжить обучение',
     resume: 'Продолжить',

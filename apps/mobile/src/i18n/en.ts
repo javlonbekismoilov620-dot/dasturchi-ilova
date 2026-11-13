@@ -131,6 +131,7 @@ const en = {
     morning: 'Good morning',
     afternoon: 'Good afternoon',
     evening: 'Good evening',
+    welcomeGuest: 'Welcome',
     guestName: 'learner',
     continueLearning: 'Continue learning',
     resume: 'Resume',
