@@ -91,8 +91,22 @@ Motion respects the system *Reduce Motion* setting and an in-app override.
 
 **Internationalisation.** `src/i18n` has typed dictionaries for English, Oʻzbekcha and
 Русский, CLDR plural rules (including Russian one/few/many) and Uzbek date formatting. The
-compiler rejects missing keys. The UI language is independent of course language: course
-content is stored per language (`courses.language`).
+compiler rejects missing keys.
+
+**Content translations.** Each course has a base language (`courses.language`). Translations
+live next to the original text in a `translations` jsonb column on every content table,
+for example `{ "uz": { "title": "…", "body_md": "…" } }`. Because they are stored on the
+same rows, translating never changes IDs, progress, attempts or certificates.
+`src/i18n/content.ts` applies the overlay for the app language in React Query's `select`.
+The cache keeps the raw rows, so switching language is instant and works offline. When a
+translation is missing, the original is shown with a notice. On the server:
+- `get_quiz` returns translated prompts and options, but not translated explanations.
+- `submit_quiz_attempt` returns translated explanations and feedback.
+- Short answers are accepted in any language.
+- Search covers translated titles.
+
+Studio edits translations side by side with the source text, and
+`supabase/tests/content.test.mjs` audits completeness, orthography and structure.
 
 **Offline.** React Query's cache is persisted, so courses and lessons opened before stay
 readable offline. Lesson resources can be downloaded to the app's document directory
@@ -193,8 +207,10 @@ Publishing is restricted to editors and admins. The database rejects anything el
 
 | Suite | Command | Covers |
 | --- | --- | --- |
-| Backend E2E | `npm run db:test` | RLS isolation, enrolment, progress caps, server grading, forged answers, certificates, premium gating, admin RPCs, edge functions |
+| Content audit | `npm run db:test` | Uzbek completeness, orthography (ʻ/ʼ), structure parity with the source, quiz integrity, honest status flags |
+| Backend E2E | `npm run db:test` | RLS isolation, enrolment, progress caps, server grading, forged answers, translations, certificates, premium gating, admin RPCs, edge functions |
 | Mobile unit | `npm test -w @mahorat/mobile` | i18n plurals and formatting, learning helpers, validation, demo engine |
 | Type and lint | `npm run typecheck`, `npm run lint` | Both apps, including React Compiler rules |
 | Mobile journey | `node qa/journey.cjs` | Full learner journey on the web build against local Supabase |
-| Studio journey | `node qa/admin-journey.cjs` | Admin sign-in, CRUD and publishing |
+| Studio journey | `node qa/admin-journey.cjs` | Admin sign-in, CRUD, publishing and translation editing |
+| Language journey | `node qa/i18n-journey.cjs` | Switching uz/ru/en in Settings: content, fallback notices, progress kept |

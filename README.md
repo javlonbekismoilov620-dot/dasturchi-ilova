@@ -13,7 +13,7 @@ development, graphic design, and AI. The interface is available in English, Oʻz
 | `supabase` | Postgres schema with RLS, the learning engine (RPCs), storage, edge functions, seed content and tests |
 | `store` | Store listing copy (en/uz/ru), privacy answers, screenshots and graphics |
 | `qa` | Playwright journeys and store-asset generators |
-| `docs` | [Architecture](docs/ARCHITECTURE.md) · [Progress report](docs/PROGRESS.md) · [Release runbook](docs/RELEASE.md) |
+| `docs` | [Architecture](docs/ARCHITECTURE.md) · [Progress report](docs/PROGRESS.md) · [Content audit](docs/CONTENT_AUDIT.md) · [Curriculum](docs/curriculum/README.md) · [Release runbook](docs/RELEASE.md) |
 
 > **Status:** in development, and **not published** on the App Store or Google Play. See the
 > [progress report](docs/PROGRESS.md) for what is verified, what still needs devices or
