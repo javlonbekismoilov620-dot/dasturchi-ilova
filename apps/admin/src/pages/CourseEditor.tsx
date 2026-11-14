@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 
 import { CoverArt, type Pattern } from '../components/CoverArt';
 import { PageHead } from '../components/Layout';
+import { LocalePicker, targetLocales, TranslationEditor, translationStatus, type Locale, type Translations } from '../components/Translations';
 import { Badge, Button, ConfirmButton, Empty, Field, Input, ListEditor, Loading, Modal, Select, StatusBadge, Switch, Tabs, Textarea, UploadButton, safeFileName, useToast } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { errMsg, fmtMinutes, LESSON_TYPES, LEVELS, PATTERNS, slugify, STATUSES } from '../lib/format';
@@ -37,6 +38,7 @@ interface Course {
   lesson_count: number;
   duration_seconds: number;
   enrollment_count: number;
+  translations?: Translations;
 }
 
 interface LessonRow {
@@ -79,7 +81,7 @@ export function CourseEditor() {
   const qc = useQueryClient();
   const toast = useToast();
   const { isEditor } = useAuth();
-  const [tab, setTab] = useState<'details' | 'curriculum'>('details');
+  const [tab, setTab] = useState<'details' | 'curriculum' | 'translations'>('details');
   const [form, setForm] = useState<Course | null>(null);
   const categories = useCategoriesFlat();
   const instructors = useInstructors();
@@ -148,9 +150,19 @@ export function CourseEditor() {
           </>
         }
       />
-      <Tabs value={tab} onChange={setTab} tabs={[{ value: 'details', label: 'Details' }, { value: 'curriculum', label: 'Curriculum' }]} />
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: 'details', label: 'Details' },
+          { value: 'curriculum', label: 'Curriculum' },
+          { value: 'translations', label: 'Translations' },
+        ]}
+      />
 
-      {tab === 'details' ? (
+      {tab === 'translations' && <CourseTranslations course={course.data!} onSaved={() => qc.invalidateQueries({ queryKey: ['course', id] })} />}
+
+      {tab === 'translations' ? null : tab === 'details' ? (
         <div className="grid-2" style={{ gridTemplateColumns: 'minmax(0,1.6fr) minmax(0,1fr)', alignItems: 'start' }}>
           <div className="stack">
             <div className="card stack">
@@ -418,6 +430,73 @@ function Curriculum({ courseId }: { courseId: string }) {
           </div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+// Translations ------------------------------------------------------------------------
+const COURSE_TR_FIELDS = [
+  { key: 'title', label: 'Title' },
+  { key: 'subtitle', label: 'Subtitle' },
+  { key: 'description', label: 'Description (Markdown)', kind: 'markdown' as const },
+  { key: 'learning_outcomes', label: 'What learners will learn', kind: 'list' as const },
+  { key: 'prerequisites', label: 'Before you start', kind: 'list' as const },
+];
+const MODULE_TR_FIELDS = [
+  { key: 'title', label: 'Module title' },
+  { key: 'description', label: 'Module description' },
+];
+const LESSON_TR_FIELDS = [
+  { key: 'title', label: 'Title' },
+  { key: 'summary', label: 'Summary' },
+];
+
+type TrModule = { id: string; title: string; description: string | null; translations: Translations; lessons: { id: string; title: string; summary: string | null; status: string; position: number; translations: Translations }[] };
+
+function CourseTranslations({ course, onSaved }: { course: Course; onSaved: () => void }) {
+  const [locale, setLocale] = useState<Locale>(targetLocales(course.language)[0].code);
+  const modules = useQuery({
+    queryKey: ['course-translations', course.id],
+    queryFn: async () =>
+      must(
+        await supabase
+          .from('modules')
+          .select('id, title, description, translations, lessons(id, title, summary, status, position, translations)')
+          .eq('course_id', course.id)
+          .order('position')
+          .order('position', { referencedTable: 'lessons' }),
+      ) as unknown as TrModule[],
+  });
+  return (
+    <div className="stack">
+      <div className="card">
+        <LocalePicker value={locale} onChange={setLocale} baseLanguage={course.language} />
+        <p className="muted small" style={{ marginBottom: 0 }}>
+          Learners see the translation for their app language. Anything left empty falls back to the original with a “translation is being prepared” notice. Lesson bodies and quizzes are translated in their own editors.
+        </p>
+      </div>
+      <TranslationEditor table="courses" row={course as never} fields={COURSE_TR_FIELDS} locale={locale} title="Course" onSaved={onSaved} />
+      {(modules.data ?? []).map((m) => (
+        <div key={m.id} className="stack">
+          <TranslationEditor table="modules" row={m as never} fields={MODULE_TR_FIELDS} locale={locale} title={`Module · ${m.title}`} onSaved={() => modules.refetch()} />
+          <div className="card stack" style={{ gap: 6 }}>
+            {m.lessons.map((l) => {
+              const st = translationStatus(l as never, LESSON_TR_FIELDS, locale);
+              return (
+                <div key={l.id} className="row" style={{ justifyContent: 'space-between' }}>
+                  <span>
+                    {l.title} <StatusBadge status={l.status} />
+                  </span>
+                  <span className="row" style={{ gap: 8 }}>
+                    <Badge tone={st.complete ? 'success' : 'warning'}>{st.complete ? 'Title translated' : 'Needs translation'}</Badge>
+                    <Link to={`/lessons/${l.id}?tab=translations&locale=${locale}`}>Translate lesson</Link>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

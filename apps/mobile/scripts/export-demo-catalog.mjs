@@ -19,7 +19,7 @@ const modules = (await q(db.from('modules').select('*').eq('status', 'published'
 const moduleIds = new Set(modules.map((m) => m.id));
 const lessons = (await q(db.from('lessons').select('*').eq('status', 'published').order('position'))).filter((l) => moduleIds.has(l.module_id));
 const lessonIds = new Set(lessons.map((l) => l.id));
-const contents = (await q(db.from('lesson_contents').select('lesson_id, body_md'))).filter((c) => lessonIds.has(c.lesson_id));
+const contents = (await q(db.from('lesson_contents').select('lesson_id, body_md, translations'))).filter((c) => lessonIds.has(c.lesson_id));
 const quizzes = (await q(db.from('quizzes').select('*, questions(*, answers(*))').eq('status', 'published'))).filter((x) => courseIds.has(x.course_id) && (!x.lesson_id || lessonIds.has(x.lesson_id)));
 const assignments = (await q(db.from('assignments').select('*').eq('status', 'published'))).filter((a) => courseIds.has(a.course_id));
 const paths = await q(db.from('learning_paths').select('*, learning_path_courses(course_id, position)').eq('status', 'published').order('position'));

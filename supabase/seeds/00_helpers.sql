@@ -61,3 +61,94 @@ create or replace function seed.answer(p_question uuid, p_position int, p_label 
   insert into public.answers (question_id, position, label_md, is_correct, feedback_md)
   values (p_question, p_position, p_label, p_correct, p_feedback);
 $$;
+
+-- ---------------------------------------------------------------------------------------
+-- Translation overlays. They UPDATE existing rows (never insert), are keyed by stable
+-- slugs / base-language titles / positions, and fail loudly when a key does not match —
+-- so a translation can never silently attach to the wrong content or create new IDs.
+create or replace function seed.tr(p_table text, p_id uuid, p_locale text, p_fields jsonb, p_key text, p_id_col text default 'id')
+returns void language plpgsql as $$
+begin
+  if p_id is null then
+    raise exception 'seed.tr: no % row matches %', p_table, p_key;
+  end if;
+  execute format(
+    'update public.%I set translations = jsonb_set(translations, array[$1], coalesce(translations -> $1, ''{}''::jsonb) || $2) where %I = $3',
+    p_table, p_id_col) using p_locale, jsonb_strip_nulls(p_fields), p_id;
+end $$;
+
+create or replace function seed.tr_category(p_slug text, p_locale text, p_title text, p_subtitle text default null, p_description text default null)
+returns void language sql as $$
+  select seed.tr('categories', (select id from public.categories where slug = p_slug), p_locale,
+    jsonb_build_object('title', p_title, 'subtitle', p_subtitle, 'description', p_description), p_slug);
+$$;
+
+create or replace function seed.tr_course(p_slug text, p_locale text, p_title text, p_subtitle text, p_description text,
+  p_outcomes text[], p_prerequisites text[]) returns void language sql as $$
+  select seed.tr('courses', seed.course(p_slug), p_locale, jsonb_build_object(
+    'title', p_title, 'subtitle', p_subtitle, 'description', p_description,
+    'learning_outcomes', to_jsonb(p_outcomes), 'prerequisites', to_jsonb(p_prerequisites)), p_slug);
+$$;
+
+create or replace function seed.tr_module(p_course text, p_title_base text, p_locale text, p_title text, p_description text)
+returns void language sql as $$
+  select seed.tr('modules', (select id from public.modules where course_id = seed.course(p_course) and title = p_title_base),
+    p_locale, jsonb_build_object('title', p_title, 'description', p_description), p_course || ' / ' || p_title_base);
+$$;
+
+create or replace function seed.lesson_id(p_course text, p_title_base text) returns uuid language sql as $$
+  select id from public.lessons where course_id = seed.course(p_course) and title = p_title_base;
+$$;
+
+create or replace function seed.tr_lesson(p_course text, p_title_base text, p_locale text, p_title text, p_summary text, p_body text)
+returns void language plpgsql as $$
+declare v uuid := seed.lesson_id(p_course, p_title_base);
+begin
+  perform seed.tr('lessons', v, p_locale, jsonb_build_object('title', p_title, 'summary', p_summary), p_course || ' / ' || p_title_base);
+  if p_body is not null then
+    perform seed.tr('lesson_contents', (select lesson_id from public.lesson_contents where lesson_id = v), p_locale,
+      jsonb_build_object('body_md', p_body), p_course || ' / ' || p_title_base || ' (body)', 'lesson_id');
+  end if;
+end $$;
+
+create or replace function seed.quiz_id(p_course text, p_title_base text) returns uuid language sql as $$
+  select id from public.quizzes where course_id = seed.course(p_course) and title = p_title_base;
+$$;
+
+create or replace function seed.tr_quiz(p_course text, p_title_base text, p_locale text, p_title text, p_description text default null)
+returns void language sql as $$
+  select seed.tr('quizzes', seed.quiz_id(p_course, p_title_base), p_locale,
+    jsonb_build_object('title', p_title, 'description', p_description), p_course || ' / ' || p_title_base);
+$$;
+
+-- One call per question: prompt, explanation, optional translated code snippet, then the
+-- answer labels and feedback in answer-position order (null = keep the base text).
+create or replace function seed.tr_question(p_course text, p_quiz_base text, p_position int, p_locale text,
+  p_prompt text, p_explanation text, p_labels text[], p_feedback text[] default null, p_code text default null)
+returns void language plpgsql as $$
+declare
+  v_q uuid := (select id from public.questions where quiz_id = seed.quiz_id(p_course, p_quiz_base) and position = p_position);
+  v_key text := p_course || ' / ' || p_quiz_base || ' / Q' || p_position;
+  a record;
+  i int := 0;
+begin
+  perform seed.tr('questions', v_q, p_locale,
+    jsonb_build_object('prompt_md', p_prompt, 'explanation_md', p_explanation, 'code_snippet', p_code), v_key);
+  if cardinality(p_labels) <> (select count(*) from public.answers where question_id = v_q) then
+    raise exception 'seed.tr_question: % has % answers, % labels given', v_key,
+      (select count(*) from public.answers where question_id = v_q), cardinality(p_labels);
+  end if;
+  for a in select id from public.answers where question_id = v_q order by position, id loop
+    i := i + 1;
+    perform seed.tr('answers', a.id, p_locale,
+      jsonb_build_object('label_md', p_labels[i], 'feedback_md', p_feedback[i]), v_key || ' / A' || i);
+  end loop;
+end $$;
+
+create or replace function seed.tr_simple(p_table text, p_slug text, p_locale text, p_fields jsonb)
+returns void language plpgsql as $$
+declare v uuid;
+begin
+  execute format('select id from public.%I where slug = $1', p_table) into v using p_slug;
+  perform seed.tr(p_table, v, p_locale, p_fields, p_table || ' / ' || p_slug);
+end $$;

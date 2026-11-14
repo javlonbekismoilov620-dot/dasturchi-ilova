@@ -472,6 +472,11 @@ const ru: Dictionary = {
     continueDemo: 'Продолжить в демо-режиме',
     accountsDisabled: 'Для аккаунтов нужен подключённый сервер. В демо-режиме можно посмотреть всё.',
   },
+  content: {
+    untranslatedTitle: 'Перевод готовится',
+    untranslatedBody: 'Пока перевода нет, материал показан {language}.',
+    inLanguage: { en: 'на английском', uz: 'на узбекском', ru: 'на русском' },
+  },
   time: {
     justNow: 'только что',
     minutesAgo: { one: '{n} минуту назад', few: '{n} минуты назад', many: '{n} минут назад', other: '{n} минуты назад' },

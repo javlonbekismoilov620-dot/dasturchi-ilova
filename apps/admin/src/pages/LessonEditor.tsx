@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, ClipboardList, FileText, Link2, Plus, Save, Trash2, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { PageHead } from '../components/Layout';
-import { Badge, Button, ConfirmButton, Empty, Field, Input, Loading, Select, StatusBadge, Switch, Textarea, UploadButton, safeFileName, useToast } from '../components/ui';
+import { LocalePicker, targetLocales, TranslationEditor, type Locale, type Translations } from '../components/Translations';
+import { Badge, Button, ConfirmButton, Empty, Field, Input, Loading, Select, StatusBadge, Switch, Tabs, Textarea, UploadButton, safeFileName, useToast } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { errMsg, LESSON_TYPES, STATUSES } from '../lib/format';
 import { renderMarkdown } from '../lib/markdown';
@@ -22,7 +23,8 @@ interface Lesson {
   is_required: boolean;
   xp: number;
   status: string;
-  course: { title: string } | null;
+  translations?: Translations;
+  course: { title: string; language: string } | null;
   module: { title: string } | null;
 }
 interface VideoRow {
@@ -58,12 +60,14 @@ export function LessonEditor() {
   const [body, setBody] = useState('');
   const [external, setExternal] = useState({ provider: 'mux', value: '' });
   const [link, setLink] = useState({ title: '', url: '' });
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'translations' ? 'translations' : 'content';
 
-  const lesson = useQuery({ queryKey: ['lesson', id], queryFn: async () => must(await supabase.from('lessons').select('*, course:courses(title), module:modules(title)').eq('id', id!).single()) as unknown as Lesson });
+  const lesson = useQuery({ queryKey: ['lesson', id], queryFn: async () => must(await supabase.from('lessons').select('*, course:courses(title, language), module:modules(title)').eq('id', id!).single()) as unknown as Lesson });
   const content = useQuery({
     queryKey: ['lesson-content', id],
     queryFn: async () =>
-      must(await supabase.from('lesson_contents').select('body_md, video:videos(id, provider, storage_path, external_id, external_url, duration_seconds, video_sources(id, quality, storage_path), video_captions(id, language, label, storage_path))').eq('lesson_id', id!).maybeSingle()) as unknown as { body_md: string | null; video: VideoRow | null } | null,
+      must(await supabase.from('lesson_contents').select('lesson_id, body_md, translations, video:videos(id, provider, storage_path, external_id, external_url, duration_seconds, video_sources(id, quality, storage_path), video_captions(id, language, label, storage_path))').eq('lesson_id', id!).maybeSingle()) as unknown as { lesson_id: string; body_md: string | null; translations: Translations; video: VideoRow | null } | null,
   });
   const resources = useQuery({ queryKey: ['resources', id], queryFn: async () => must(await supabase.from('resources').select('*').eq('lesson_id', id!).order('position')) as Resource[] });
   const quiz = useQuery({ queryKey: ['lesson-quiz', id], queryFn: async () => must(await supabase.from('quizzes').select('id, title, kind, status').eq('lesson_id', id!).maybeSingle()) as { id: string; title: string; kind: string; status: string } | null });
@@ -135,6 +139,17 @@ export function LessonEditor() {
           </>
         }
       />
+      <Tabs
+        value={tab}
+        onChange={(v) => setParams(v === 'translations' ? { tab: v, locale: params.get('locale') ?? '' } : {})}
+        tabs={[
+          { value: 'content', label: 'Content' },
+          { value: 'translations', label: 'Translations' },
+        ]}
+      />
+      {tab === 'translations' ? (
+        <LessonTranslations lesson={l} content={content.data ?? null} initialLocale={params.get('locale') as Locale | null} onSaved={refresh} />
+      ) : (
       <div className="grid-2" style={{ gridTemplateColumns: 'minmax(0,1fr) 340px', alignItems: 'start' }}>
         <div className="stack">
           <div className="card stack">
@@ -366,6 +381,7 @@ export function LessonEditor() {
           <AssignmentCard lesson={l} assignment={assignment.data as AssignmentRow | null} onChange={refresh} />
         </div>
       </div>
+      )}
     </>
   );
 }
@@ -450,6 +466,38 @@ function AssignmentCard({ lesson, assignment, onChange }: { lesson: Lesson; assi
         }}>
         Save assignment
       </Button>
+    </div>
+  );
+}
+
+function LessonTranslations({
+  lesson,
+  content,
+  initialLocale,
+  onSaved,
+}: {
+  lesson: Lesson;
+  content: { lesson_id: string; body_md: string | null; translations: Translations } | null;
+  initialLocale: Locale | null;
+  onSaved: () => void;
+}) {
+  const base = lesson.course?.language ?? 'en';
+  const targets = targetLocales(base);
+  const [locale, setLocale] = useState<Locale>(targets.some((t) => t.code === initialLocale) ? initialLocale! : targets[0].code);
+  return (
+    <div className="stack">
+      <div className="card">
+        <LocalePicker value={locale} onChange={setLocale} baseLanguage={base} />
+        <p className="muted small" style={{ marginBottom: 0 }}>
+          Keep the structure of the original: the same headings, callouts, tables and code blocks. Translate prose, comments and on-screen text inside examples; leave code keywords, tags and commands unchanged. The content audit (npm run db:test) checks this.
+        </p>
+      </div>
+      <TranslationEditor table="lessons" row={lesson as never} fields={[{ key: 'title', label: 'Title' }, { key: 'summary', label: 'Summary' }]} locale={locale} title="Lesson" onSaved={onSaved} />
+      {content?.body_md ? (
+        <TranslationEditor table="lesson_contents" idColumn="lesson_id" row={content as never} fields={[{ key: 'body_md', label: 'Lesson text (Markdown)', kind: 'markdown' }]} locale={locale} title="Lesson text" onSaved={onSaved} />
+      ) : (
+        <Empty title="No lesson text yet" body="Write the original lesson text first, then translate it here." />
+      )}
     </div>
   );
 }

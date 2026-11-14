@@ -22,6 +22,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { lessonIcon } from '@/components/course/Curriculum';
+import { UntranslatedNotice } from '@/components/feedback/Banners';
 import { Markdown } from '@/components/lesson/Markdown';
 import { VideoPlayer } from '@/components/lesson/VideoPlayer';
 import { Button } from '@/components/ui/Button';
@@ -277,6 +278,12 @@ export default function LessonScreen() {
                 {tr('lesson.signInToTrack')}
               </Text>
             </PressableScale>
+          )}
+
+          {c.body_md && c.content_untranslated && (
+            <View style={{ marginTop: 24 }}>
+              <UntranslatedNotice baseLanguage={c.language} />
+            </View>
           )}
 
           {c.body_md && (

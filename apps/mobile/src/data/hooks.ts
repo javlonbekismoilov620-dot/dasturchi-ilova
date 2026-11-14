@@ -1,6 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { create } from 'zustand';
 
+import { useContentLocalizer } from '@/i18n/content';
+
 import { api } from '.';
 import type { UploadableFile } from './api';
 import { useAuth } from './auth';
@@ -73,30 +75,62 @@ function celebrate(result: Pick<ProgressResult, 'new_achievements' | 'certificat
 // Catalog
 // ---------------------------------------------------------------------------
 export const useSettings = () => useQuery({ queryKey: qk.settings, queryFn: () => api.getSettings(), staleTime: 5 * 60_000 });
-export const useCategories = () => useQuery({ queryKey: qk.categories, queryFn: () => api.getCategories(), staleTime: 30 * 60_000 });
-export const useSearchCourses = (f: CourseFilters) =>
-  useQuery({ queryKey: qk.search(f), queryFn: () => api.searchCourses(f, 40), placeholderData: keepPreviousData });
-export const useFeaturedCourses = () => useQuery({ queryKey: qk.featured, queryFn: () => api.getFeaturedCourses(8) });
-export const usePopularCourses = () => useQuery({ queryKey: qk.popular, queryFn: () => api.getPopularCourses(10) });
-export const useNewCourses = () => useQuery({ queryKey: qk.newest, queryFn: () => api.getNewCourses(10) });
+// Content queries cache the raw rows (with every translation) and localize in `select`,
+// so switching language re-renders instantly, even offline, without refetching.
+export function useCategories() {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.categories, queryFn: () => api.getCategories(), staleTime: 30 * 60_000, select });
+}
+export function useSearchCourses(f: CourseFilters) {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.search(f), queryFn: () => api.searchCourses(f, 40), placeholderData: keepPreviousData, select });
+}
+export function useFeaturedCourses() {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.featured, queryFn: () => api.getFeaturedCourses(8), select });
+}
+export function usePopularCourses() {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.popular, queryFn: () => api.getPopularCourses(10), select });
+}
+export function useNewCourses() {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.newest, queryFn: () => api.getNewCourses(10), select });
+}
 export function useRecommendedCourses() {
   const uid = useUid();
-  return useQuery({ queryKey: qk.recommended(uid), queryFn: () => api.getRecommendedCourses(10) });
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.recommended(uid), queryFn: () => api.getRecommendedCourses(10), select });
 }
-export const useCourse = (slug: string | undefined) =>
-  useQuery({ queryKey: qk.course(slug ?? ''), queryFn: () => api.getCourse(slug!), enabled: !!slug });
-export const useCourseById = (id: string | undefined) =>
-  useQuery({ queryKey: qk.courseById(id ?? ''), queryFn: () => api.getCourseById(id!), enabled: !!id });
-export const usePaths = () => useQuery({ queryKey: qk.paths, queryFn: () => api.getPaths() });
-export const usePath = (slug: string | undefined) => useQuery({ queryKey: qk.path(slug ?? ''), queryFn: () => api.getPath(slug!), enabled: !!slug });
-export const usePlans = () => useQuery({ queryKey: qk.plans, queryFn: () => api.getPlans(), staleTime: 10 * 60_000 });
+export function useCourse(slug: string | undefined) {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.course(slug ?? ''), queryFn: () => api.getCourse(slug!), enabled: !!slug, select });
+}
+export function useCourseById(id: string | undefined) {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.courseById(id ?? ''), queryFn: () => api.getCourseById(id!), enabled: !!id, select });
+}
+export function usePaths() {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.paths, queryFn: () => api.getPaths(), select });
+}
+export function usePath(slug: string | undefined) {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.path(slug ?? ''), queryFn: () => api.getPath(slug!), enabled: !!slug, select });
+}
+export function usePlans() {
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.plans, queryFn: () => api.getPlans(), staleTime: 10 * 60_000, select });
+}
 
 export function useLessonContent(lessonId: string | undefined) {
   const uid = useUid();
   const premium = useEntitlements().data?.is_premium;
+  const select = useContentLocalizer();
   return useQuery({
     queryKey: [...qk.lesson(lessonId ?? ''), uid ?? 'guest', premium ? 'p' : 'f'],
     queryFn: () => api.getLessonContent(lessonId!),
+    select,
     enabled: !!lessonId,
     staleTime: 30 * 60_000, // signed media URLs live for 6h
   });
@@ -107,7 +141,8 @@ export const useLessonCourseId = (lessonId: string | undefined) =>
 
 export function useQuiz(quizId: string | null | undefined) {
   const uid = useUid();
-  return useQuery({ queryKey: [...qk.quiz(quizId ?? ''), uid ?? 'guest'], queryFn: () => api.getQuiz(quizId!), enabled: !!quizId, staleTime: 0 });
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: [...qk.quiz(quizId ?? ''), uid ?? 'guest'], queryFn: () => api.getQuiz(quizId!), enabled: !!quizId, staleTime: 0, select });
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +165,8 @@ export function useStats() {
 
 export function useEnrollments() {
   const uid = useUid();
-  return useQuery({ queryKey: qk.enrollments(uid), queryFn: () => api.getEnrollments(), enabled: useSignedIn() });
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.enrollments(uid), queryFn: () => api.getEnrollments(), enabled: useSignedIn(), select });
 }
 
 export function useCourseProgress(courseId: string | undefined) {
@@ -140,12 +176,14 @@ export function useCourseProgress(courseId: string | undefined) {
 
 export function useRecentLessons() {
   const uid = useUid();
-  return useQuery({ queryKey: qk.recent(uid), queryFn: () => api.getRecentLessons(12), enabled: useSignedIn() });
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.recent(uid), queryFn: () => api.getRecentLessons(12), enabled: useSignedIn(), select });
 }
 
 export function useAchievements() {
   const uid = useUid();
-  const catalog = useQuery({ queryKey: qk.achievementsCatalog, queryFn: () => api.getAchievementCatalog(), staleTime: 60 * 60_000 });
+  const select = useContentLocalizer();
+  const catalog = useQuery({ queryKey: qk.achievementsCatalog, queryFn: () => api.getAchievementCatalog(), staleTime: 60 * 60_000, select });
   const earned = useQuery({ queryKey: qk.earned(uid), queryFn: () => api.getEarnedAchievements(), enabled: useSignedIn() });
   return { catalog, earned };
 }
@@ -157,7 +195,8 @@ export function useCertificates() {
 
 export function useBookmarks() {
   const uid = useUid();
-  return useQuery({ queryKey: qk.bookmarks(uid), queryFn: () => api.getBookmarks(), enabled: useSignedIn() });
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: qk.bookmarks(uid), queryFn: () => api.getBookmarks(), enabled: useSignedIn(), select });
 }
 
 export function useNotes(lessonId: string | undefined) {

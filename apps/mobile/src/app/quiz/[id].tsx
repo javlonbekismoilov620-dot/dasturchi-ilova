@@ -20,6 +20,7 @@ import type { Quiz, QuizQuestion, QuizResponses, QuizResult } from '@/data/types
 import { haptics } from '@/lib/haptics';
 import { errorMessageKey } from '@/lib/errors';
 import { useI18n } from '@/i18n';
+import { useContentLocalizer } from '@/i18n/content';
 import { useTheme } from '@/theme/ThemeProvider';
 
 function AnswerOption({ label, selected, multi, onPress }: { label: string; selected: boolean; multi: boolean; onPress: () => void }) {
@@ -165,6 +166,7 @@ export default function QuizScreen() {
   const insets = useSafeAreaInsets();
   const quiz = useQuiz(id);
   const submit = useSubmitQuiz();
+  const localize = useContentLocalizer();
   const certificates = useCertificates();
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
@@ -243,7 +245,7 @@ export default function QuizScreen() {
         <Aurora hue={result.passed ? 150 : 38} intensity={0.5} />
         <Results
           quiz={q}
-          result={result}
+          result={localize(result)}
           responses={responses}
           onRetry={() => {
             setResult(null);

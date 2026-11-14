@@ -104,7 +104,7 @@ print("Hello,", name)
 print("Welcome to Python.")
 ```
 
-In the terminal, go to the folder with the file and run:
+In the terminal, move to the folder that contains the file with the `cd` command (*change directory*), for example `cd Documents`. Then run:
 
 ```bash
 python hello.py

@@ -38,8 +38,14 @@ import type {
 } from '../types';
 import rawCatalog from './catalog.json';
 
-type DemoAnswer = { id: string; label_md: string; is_correct: boolean; feedback_md: string | null; position: number };
-type DemoQuestion = { id: string; type: Quiz['questions'][number]['type']; prompt_md: string; code_snippet: string | null; explanation_md: string | null; points: number; position: number; answers: DemoAnswer[] };
+type Translations = Record<string, Record<string, unknown>>;
+type DemoAnswer = { id: string; label_md: string; is_correct: boolean; feedback_md: string | null; position: number; translations?: Translations };
+type DemoQuestion = { id: string; type: Quiz['questions'][number]['type']; prompt_md: string; code_snippet: string | null; explanation_md: string | null; points: number; position: number; answers: DemoAnswer[]; translations?: Translations };
+
+/** Mirrors private.pick_translations: keep only the given fields of each locale overlay. */
+function pickTranslations(t: Translations | undefined, fields: string[]): Translations {
+  return Object.fromEntries(Object.entries(t ?? {}).map(([locale, o]) => [locale, Object.fromEntries(Object.entries(o).filter(([k]) => fields.includes(k)))]));
+}
 type DemoQuiz = Omit<Quiz, 'questions' | 'attempts_used' | 'best_score' | 'passed'> & { module_id: string | null; shuffle_questions: boolean; questions: DemoQuestion[] };
 
 const catalog = rawCatalog as unknown as {
@@ -50,7 +56,7 @@ const catalog = rawCatalog as unknown as {
   prerequisites: { course_id: string; prerequisite_course_id: string }[];
   modules: Omit<Module, 'lessons'>[];
   lessons: Lesson[];
-  contents: { lesson_id: string; body_md: string | null }[];
+  contents: { lesson_id: string; body_md: string | null; translations?: Translations }[];
   quizzes: DemoQuiz[];
   assignments: (Assignment & { module_id: string | null })[];
   paths: (Omit<LearningPath, 'courses'> & { courses: { course_id: string; position: number }[] })[];
@@ -328,7 +334,10 @@ function grade(quiz: DemoQuiz, responses: Record<string, string[] | string>) {
     const norm = (v: string) => v.trim().toLowerCase().replace(/\s+/g, ' ');
     if (q.type === 'short_answer') {
       text = typeof responses[q.id] === 'string' ? (responses[q.id] as string) : null;
-      ok = text !== null && q.answers.some((a) => a.is_correct && norm(a.label_md) === norm(text!));
+      // Accepted in any language, like the server.
+      ok =
+        text !== null &&
+        q.answers.some((a) => a.is_correct && [a.label_md, ...Object.values(a.translations ?? {}).map((o) => o.label_md)].some((l) => typeof l === 'string' && norm(l) === norm(text!)));
     } else {
       const raw = Array.isArray(responses[q.id]) ? (responses[q.id] as string[]) : [];
       selected = [...new Set(raw.filter((id) => q.answers.some((a) => a.id === id)))].sort();
@@ -344,7 +353,10 @@ function grade(quiz: DemoQuiz, responses: Record<string, string[] | string>) {
       correct_answer_ids: q.type === 'short_answer' ? [] : correctIds,
       accepted_answers: q.type === 'short_answer' ? q.answers.filter((a) => a.is_correct).map((a) => a.label_md) : [],
       explanation_md: q.explanation_md,
-      feedback: q.answers.filter((a) => a.feedback_md && (selected.includes(a.id) || a.is_correct)).map((a) => ({ answer_id: a.id, feedback_md: a.feedback_md! })),
+      translations: pickTranslations(q.translations, ['explanation_md']),
+      feedback: q.answers
+        .filter((a) => a.feedback_md && (selected.includes(a.id) || a.is_correct))
+        .map((a) => ({ answer_id: a.id, feedback_md: a.feedback_md!, translations: pickTranslations(a.translations, ['feedback_md']) })),
     };
   });
   return { earned, possible, results };
@@ -439,9 +451,12 @@ export function createDemoApi(): LearningApi {
       if (!canAccess(lesson.course_id, lesson)) throw new AppError('lesson_locked');
       const quiz = catalog.quizzes.find((q) => q.lesson_id === lessonId);
       const assignment = catalog.assignments.find((a) => a.lesson_id === lessonId) ?? null;
+      const content = catalog.contents.find((c) => c.lesson_id === lessonId);
       return delay({
         lesson_id: lessonId,
-        body_md: catalog.contents.find((c) => c.lesson_id === lessonId)?.body_md ?? null,
+        language: catalog.courses.find((c) => c.id === lesson.course_id)?.language ?? 'en',
+        body_md: content?.body_md ?? null,
+        ...(content ? { translations: content.translations ?? {} } : {}),
         video: null,
         resources: [],
         quiz_id: quiz?.id ?? null,
@@ -463,9 +478,11 @@ export function createDemoApi(): LearningApi {
         attempts_used: mine.length,
         best_score: mine.length ? Math.max(...mine.map((a) => a.score_percent)) : null,
         passed: mine.some((a) => a.passed),
-        questions: q.questions.map(({ explanation_md: _e, answers, ...rest }) => ({
+        // Like get_quiz: no answer keys, and no (translated) explanations before submission.
+        questions: q.questions.map(({ explanation_md: _e, answers, translations, ...rest }) => ({
           ...rest,
-          answers: rest.type === 'short_answer' ? [] : answers.map(({ id, label_md }) => ({ id, label_md })),
+          translations: pickTranslations(translations, ['prompt_md', 'code_snippet']),
+          answers: rest.type === 'short_answer' ? [] : answers.map(({ id, label_md, translations: at }) => ({ id, label_md, translations: pickTranslations(at, ['label_md']) })),
         })),
       });
     },

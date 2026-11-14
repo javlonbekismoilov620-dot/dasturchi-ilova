@@ -34,10 +34,10 @@ import type {
 } from './types';
 
 const COURSE_SELECT =
-  '*, category:categories!courses_category_id_fkey(id, slug, title, color, icon), subcategory:categories!courses_subcategory_id_fkey(id, slug, title), instructor:instructors(*)';
+  '*, category:categories!courses_category_id_fkey(id, slug, title, color, icon, translations), subcategory:categories!courses_subcategory_id_fkey(id, slug, title, translations), instructor:instructors(*)';
 
 const LESSON_COURSE_SELECT =
-  'id, title, type, duration_seconds, course:courses(id, slug, title, cover_style, category:categories!courses_category_id_fkey(color))';
+  'id, title, type, duration_seconds, translations, course:courses(id, slug, title, language, translations, cover_style, category:categories!courses_category_id_fkey(color))';
 
 const SIGNED_URL_TTL = 60 * 60 * 6;
 
@@ -204,28 +204,30 @@ export function createSupabaseApi(): LearningApi {
 
     async getLessonContent(lessonId) {
       const lesson = unwrap(
-        await sb().from('lessons').select('id, is_preview, course:courses(access_tier)').eq('id', lessonId).maybeSingle(),
-      ) as { id: string; is_preview: boolean; course: { access_tier: string } | null } | null;
+        await sb().from('lessons').select('id, is_preview, course:courses(access_tier, language)').eq('id', lessonId).maybeSingle(),
+      ) as { id: string; is_preview: boolean; course: { access_tier: string; language: string } | null } | null;
       if (!lesson) throw new AppError('lesson_not_found');
 
       const [content, resources, quiz, assignment] = await Promise.all([
         sb()
           .from('lesson_contents')
-          .select('lesson_id, body_md, video:videos(id, provider, storage_path, external_id, external_url, poster_path, duration_seconds, video_sources(quality, storage_path), video_captions(language, label, storage_path))')
+          .select('lesson_id, body_md, translations, video:videos(id, provider, storage_path, external_id, external_url, poster_path, duration_seconds, video_sources(quality, storage_path), video_captions(language, label, storage_path))')
           .eq('lesson_id', lessonId)
           .maybeSingle(),
         sb().from('resources').select('*').eq('lesson_id', lessonId).order('position'),
         sb().from('quizzes').select('id').eq('lesson_id', lessonId).eq('status', 'published').maybeSingle(),
         sb().from('assignments').select('*').eq('lesson_id', lessonId).eq('status', 'published').maybeSingle(),
       ]);
-      const row = unwrap(content) as { body_md: string | null; video: VideoRow | null } | null;
+      const row = unwrap(content) as { body_md: string | null; translations: Record<string, unknown>; video: VideoRow | null } | null;
       if (!row && lesson.course?.access_tier === 'premium' && !lesson.is_preview) {
         const ent = await api.getEntitlements().catch(() => null);
         if (!ent?.is_premium) throw new AppError('lesson_locked');
       }
       return {
         lesson_id: lessonId,
+        language: lesson.course?.language ?? 'en',
         body_md: row?.body_md ?? null,
+        ...(row ? { translations: row.translations } : {}),
         video: row?.video ? await resolveVideo(row.video) : null,
         resources: (unwrap(resources) ?? []) as Resource[],
         quiz_id: (unwrap(quiz) as { id: string } | null)?.id ?? null,
@@ -417,7 +419,7 @@ export function createSupabaseApi(): LearningApi {
       await sb()
         .from('courses')
         .select(
-          `${COURSE_SELECT}, modules(*, lessons(id, module_id, course_id, title, summary, type, position, duration_seconds, is_preview, is_required, xp)), prereqs:course_prerequisites!course_prerequisites_course_id_fkey(prerequisite:courses!course_prerequisites_prerequisite_course_id_fkey(id, slug, title))`,
+          `${COURSE_SELECT}, modules(*, lessons(id, module_id, course_id, title, summary, type, position, duration_seconds, is_preview, is_required, xp, translations)), prereqs:course_prerequisites!course_prerequisites_course_id_fkey(prerequisite:courses!course_prerequisites_prerequisite_course_id_fkey(id, slug, title, language, translations))`,
         )
         .eq(field, value)
         .order('position', { referencedTable: 'modules' })

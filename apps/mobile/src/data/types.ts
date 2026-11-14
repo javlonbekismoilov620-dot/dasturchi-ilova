@@ -74,6 +74,8 @@ export interface Course {
   category?: Pick<Category, 'id' | 'slug' | 'title' | 'color' | 'icon'> | null;
   subcategory?: Pick<Category, 'id' | 'slug' | 'title'> | null;
   instructor?: Instructor | null;
+  /** Set by localizeContent when no translation exists for the learner's language. */
+  content_untranslated?: boolean;
 }
 
 export interface Lesson {
@@ -140,7 +142,10 @@ export interface Resource {
 
 export interface LessonContent {
   lesson_id: string;
+  /** Base language of the course this lesson belongs to. */
+  language?: string;
   body_md: string | null;
+  content_untranslated?: boolean;
   video: LessonVideo | null;
   resources: Resource[];
   quiz_id: string | null;

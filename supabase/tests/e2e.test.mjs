@@ -207,6 +207,59 @@ test('quiz grading is server-side with explanations', async () => {
   assert.equal(attempts.length, 3);
 });
 
+test('Uzbek translations: served with content, gated like the base text, graded in any language', async () => {
+  // Catalog rows carry their overlays; IDs are the same rows learners already use.
+  const { data: course } = await anon.from('courses').select('id, title, translations').eq('slug', 'html-from-absolute-zero').single();
+  assert.equal(course.id, ids['html-from-absolute-zero']);
+  assert.equal(course.title, 'HTML from Absolute Zero');
+  assert.equal(course.translations.uz.title, 'HTML: mutlaq noldan');
+
+  // Translated lesson bodies follow exactly the same entitlement rules as the original.
+  const free = lessonByTitle('What is a computer?');
+  const { data: freeBody } = await anon.from('lesson_contents').select('translations').eq('lesson_id', free.id).single();
+  assert.match(freeBody.translations.uz.body_md, /Koʻrsatmalarga amal qiladigan mashina/);
+  const locked = lessonByTitle('Variables: giving names to values');
+  const { data: lockedBody } = await student2.client.from('lesson_contents').select('translations').eq('lesson_id', locked.id);
+  assert.equal(lockedBody.length, 0, 'premium translation hidden from a free learner');
+
+  // get_quiz: translated prompts and options, but no translated explanations or feedback before submitting.
+  const { quizId, wrong } = await answerKey('Module 1 check');
+  const { data: quiz } = await anon.rpc('get_quiz', { p_quiz_id: quizId });
+  assert.equal(quiz.translations.uz.title, '1-modul boʻyicha test');
+  assert.ok(quiz.questions.every((q) => q.translations.uz.prompt_md && !('explanation_md' in q.translations.uz)));
+  assert.ok(quiz.questions.flatMap((q) => q.answers).every((a) => a.translations.uz.label_md && !('feedback_md' in a.translations.uz)));
+
+  // Results include translated explanations and per-answer feedback.
+  const { data: graded, error } = await student2.client.rpc('submit_quiz_attempt', { p_quiz_id: quizId, p_responses: wrong });
+  assert.ifError(error);
+  assert.ok(graded.results.every((r) => r.translations.uz.explanation_md));
+  assert.ok(graded.results.some((r) => r.feedback.some((f) => f.translations.uz?.feedback_md)));
+
+  // Short answers are accepted in the base language or any translation.
+  const { data: fq } = await admin.from('quizzes').select('id, questions(id, type, answers(id, translations))').eq('title', 'Computer Fundamentals — final assessment').single();
+  const short = fq.questions.find((q) => q.type === 'short_answer');
+  const target = short.answers[0];
+  await admin.from('answers').update({ translations: { uz: { label_md: 'mp4-video' } } }).eq('id', target.id);
+  const { data: shortRes } = await student2.client.rpc('submit_quiz_attempt', { p_quiz_id: fq.id, p_responses: { [short.id]: '  MP4-Video ' } });
+  assert.equal(shortRes.results.find((r) => r.question_id === short.id).correct, true, 'translated accepted answer is graded correct');
+  await admin.from('answers').update({ translations: target.translations }).eq('id', target.id);
+
+  // Search finds courses by their Uzbek title.
+  const { data: found } = await anon.rpc('search_courses', { p_query: 'kompyuter asoslari' });
+  assert.equal(found[0]?.slug, 'computer-fundamentals-from-zero');
+
+  // Only supported locales, and only editors may change translations.
+  const bad = await admin.from('courses').update({ translations: { de: { title: 'Kurs' } } }).eq('slug', 'css-from-zero');
+  assert.ok(bad.error, 'unsupported locale rejected by the check constraint');
+  const byStudent = await student.client.from('lessons').update({ translations: {} }).eq('id', free.id).select('id');
+  assert.equal(byStudent.data?.length ?? 0, 0, 'learners cannot edit translations');
+  const draft = ids.lessons.find((l) => l.title === 'Comparing values');
+  const { data: edited, error: editError } = await editor.client.from('lessons')
+    .update({ translations: { uz: { title: 'Qiymatlarni solishtirish' }, ru: { title: 'Сравнение значений' } } }).eq('id', draft.id).select('translations');
+  assert.ifError(editError);
+  assert.equal(edited[0].translations.ru.title, 'Сравнение значений');
+});
+
 test('course completion → certificate requires premium → verification', async () => {
   const course = ids['computer-fundamentals-from-zero'];
   const articles = ids.lessons.filter((l) => l.course_id === course && l.status === 'published' && l.type !== 'quiz');

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CourseCover } from '@/components/brand/CourseCover';
 import { LevelMeter } from '@/components/course/CourseCards';
 import { Curriculum } from '@/components/course/Curriculum';
+import { UntranslatedNotice } from '@/components/feedback/Banners';
 import { Markdown } from '@/components/lesson/Markdown';
 import { Button } from '@/components/ui/Button';
 import { ErrorState, Glass, IconButton, ScrollScreen } from '@/components/ui/layout';
@@ -151,6 +152,12 @@ export default function CourseScreen() {
             </View>
           )}
         </View>
+
+        {c.content_untranslated && (
+          <View style={{ paddingHorizontal: t.spacing.gutter }}>
+            <UntranslatedNotice baseLanguage={c.language} />
+          </View>
+        )}
 
         {!c.content_complete && (
           <View style={{ paddingHorizontal: t.spacing.gutter }}>

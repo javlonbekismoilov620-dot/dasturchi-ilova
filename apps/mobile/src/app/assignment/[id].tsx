@@ -19,10 +19,12 @@ import { useSubmissions, useSubmitAssignment } from '@/data/hooks';
 import { errorMessageKey } from '@/lib/errors';
 import { isHttpUrl } from '@/lib/validation';
 import { useI18n } from '@/i18n';
+import { useContentLocalizer } from '@/i18n/content';
 import { useTheme } from '@/theme/ThemeProvider';
 
 function useAssignment(id: string | undefined) {
-  return useQuery({ queryKey: ['assignment', id], enabled: !!id, queryFn: () => api.getAssignment(id!) });
+  const select = useContentLocalizer();
+  return useQuery({ queryKey: ['assignment', id], enabled: !!id, queryFn: () => api.getAssignment(id!), select });
 }
 
 export default function AssignmentScreen() {

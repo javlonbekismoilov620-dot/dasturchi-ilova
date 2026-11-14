@@ -7,7 +7,7 @@ import Animated, { Easing, FadeIn, FadeOut, useAnimatedStyle, useSharedValue, wi
 import { Button } from '@/components/ui/Button';
 import { DynamicIcon } from '@/components/ui/Icon';
 import { Text } from '@/components/ui/Text';
-import { useCelebrations, type Celebration } from '@/data/hooks';
+import { useAchievements, useCelebrations, type Celebration } from '@/data/hooks';
 import { haptics } from '@/lib/haptics';
 import { useI18n } from '@/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -32,6 +32,9 @@ function Particle({ i, color }: { i: number; color: string }) {
 function Content({ item, onDone }: { item: Celebration; onDone: () => void }) {
   const t = useTheme();
   const { t: tr } = useI18n();
+  // RPC results carry the base-language title; show the learner's language from the catalog.
+  const catalog = useAchievements().catalog.data;
+  const achievementTitle = item.kind === 'achievement' ? (catalog?.find((a) => a.id === item.achievement.id)?.title ?? item.achievement.title) : '';
   const glow = useSharedValue(0);
   useEffect(() => {
     haptics.success();
@@ -58,7 +61,7 @@ function Content({ item, onDone }: { item: Celebration; onDone: () => void }) {
           {isCert ? tr('certificates.earnedTitle') : tr('achievements.unlockedTitle')}
         </Text>
         <Text variant="title1" align="center">
-          {isCert ? item.courseTitle : item.achievement.title}
+          {isCert ? item.courseTitle : achievementTitle}
         </Text>
         {!isCert && (
           <Text variant="subhead" tone="secondary" align="center">

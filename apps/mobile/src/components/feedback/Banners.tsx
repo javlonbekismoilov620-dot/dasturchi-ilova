@@ -1,11 +1,12 @@
 import NetInfo from '@react-native-community/netinfo';
 import { router } from 'expo-router';
-import { FlaskConical, WifiOff } from 'lucide-react-native';
+import { FlaskConical, Languages, WifiOff } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 
 import { PressableScale } from '@/components/ui/PressableScale';
+import { Card } from '@/components/ui/primitives';
 import { Text } from '@/components/ui/Text';
 import { isDemoMode } from '@/lib/env';
 import { useI18n } from '@/i18n';
@@ -65,3 +66,26 @@ const styles = StyleSheet.create({
   demo: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, height: 24, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
 });
+
+/**
+ * Shown when course content has no translation for the learner's language yet, so the
+ * original text is displayed instead of silently mixing languages.
+ */
+export function UntranslatedNotice({ baseLanguage }: { baseLanguage?: string | null }) {
+  const t = useTheme();
+  const { t: tr } = useI18n();
+  const lang = baseLanguage === 'uz' || baseLanguage === 'ru' ? baseLanguage : 'en';
+  return (
+    <View testID="untranslated-notice">
+    <Card style={{ flexDirection: 'row', gap: 12, backgroundColor: t.colors.surface, borderColor: t.colors.border }}>
+      <Languages size={18} color={t.colors.textSecondary} style={{ marginTop: 2 }} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text variant="headline">{tr('content.untranslatedTitle')}</Text>
+        <Text variant="footnote" tone="secondary">
+          {tr('content.untranslatedBody', { language: tr(`content.inLanguage.${lang}`) })}
+        </Text>
+      </View>
+    </Card>
+    </View>
+  );
+}

@@ -470,6 +470,11 @@ const en = {
     continueDemo: 'Continue in demo mode',
     accountsDisabled: 'Accounts need a connected backend. You can explore everything in demo mode.',
   },
+  content: {
+    untranslatedTitle: 'Not translated yet',
+    untranslatedBody: 'A translation is being prepared. Until then this is shown {language}.',
+    inLanguage: { en: 'in English', uz: 'in Uzbek', ru: 'in Russian' },
+  },
   time: {
     justNow: 'just now',
     minutesAgo: { one: '{n} minute ago', other: '{n} minutes ago' },
