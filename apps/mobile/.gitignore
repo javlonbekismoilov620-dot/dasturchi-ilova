@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# Store submission credentials (Play service account, App Store Connect keys)
+secrets/

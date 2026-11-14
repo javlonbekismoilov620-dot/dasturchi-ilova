@@ -98,6 +98,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.READ_EXTERNAL_STORAGE',
       'android.permission.WRITE_EXTERNAL_STORAGE',
       'android.permission.SYSTEM_ALERT_WINDOW',
+      // No advertising ID: no ads or tracking SDKs (see store/privacy.md).
+      'com.google.android.gms.permission.AD_ID',
     ],
     intentFilters: [
       {
