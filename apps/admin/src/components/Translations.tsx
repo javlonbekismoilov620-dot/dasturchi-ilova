@@ -1,8 +1,9 @@
 import { Check, Languages, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { errMsg } from '../lib/format';
 import { supabase } from '../lib/supabase';
+import { CONTENT_LOCALES, isFilled, targetLocales, translationStatus, type Locale, type TrField, type TrRow, type Translations } from '../lib/translations';
 import { Badge, Button, Field, Input, ListEditor, Textarea, useToast } from './ui';
 
 /**
@@ -11,23 +12,6 @@ import { Badge, Button, Field, Input, ListEditor, Textarea, useToast } from './u
  * from the source. Saving only touches `translations`, so IDs, progress and quiz
  * attempts are never affected.
  */
-export type Locale = 'en' | 'uz' | 'ru';
-export const CONTENT_LOCALES: { code: Locale; label: string }[] = [
-  { code: 'uz', label: 'Oʻzbekcha' },
-  { code: 'ru', label: 'Русский' },
-  { code: 'en', label: 'English' },
-];
-export type Translations = Partial<Record<Locale, Record<string, unknown>>>;
-export type TrField = { key: string; label: string; kind?: 'text' | 'markdown' | 'list' };
-type Row = { translations?: Translations | null } & Record<string, unknown>;
-
-const isFilled = (v: unknown) => (Array.isArray(v) ? v.some((x) => String(x).trim()) : typeof v === 'string' && v.trim() !== '');
-
-/** Locales an editor can translate into, i.e. every supported locale except the source. */
-export function targetLocales(baseLanguage: string) {
-  return CONTENT_LOCALES.filter((l) => l.code !== baseLanguage);
-}
-
 export function LocalePicker({ value, onChange, baseLanguage }: { value: Locale; onChange: (l: Locale) => void; baseLanguage: string }) {
   return (
     <div className="row" style={{ gap: 8, flexWrap: 'wrap' }} role="radiogroup" aria-label="Translation language">
@@ -42,36 +26,27 @@ export function LocalePicker({ value, onChange, baseLanguage }: { value: Locale;
   );
 }
 
-/** Completion of one row in one locale, for the badge next to each editor. */
-export function translationStatus(row: Row, fields: TrField[], locale: Locale) {
-  const needed = fields.filter((f) => isFilled(row[f.key]));
-  const done = needed.filter((f) => isFilled(row.translations?.[locale]?.[f.key]));
-  return { done: done.length, total: needed.length, complete: done.length === needed.length };
-}
-
-export function TranslationEditor({
-  table,
-  idColumn = 'id',
-  row,
-  fields,
-  locale,
-  title,
-  onSaved,
-}: {
+type EditorProps = {
   table: string;
   idColumn?: string;
-  row: Row & Record<string, unknown>;
+  row: TrRow;
   fields: TrField[];
   locale: Locale;
   title?: string;
   onSaved?: () => void;
-}) {
+};
+
+export function TranslationEditor(props: EditorProps) {
+  const { row, idColumn = 'id', locale } = props;
+  // Remount (fresh draft) when the row, the locale or the saved translation changes.
+  return <TranslationForm key={`${String(row[idColumn])}:${locale}:${JSON.stringify(row.translations?.[locale] ?? {})}`} {...props} />;
+}
+
+function TranslationForm({ table, idColumn = 'id', row, fields, locale, title, onSaved }: EditorProps) {
   const toast = useToast();
   const initial = (row.translations?.[locale] ?? {}) as Record<string, unknown>;
   const [draft, setDraft] = useState<Record<string, unknown>>(initial);
   const [saving, setSaving] = useState(false);
-  const key = `${String(row[idColumn])}:${locale}:${JSON.stringify(initial)}`;
-  useEffect(() => setDraft(initial), [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const status = translationStatus({ ...row, translations: { ...row.translations, [locale]: draft } }, fields, locale);

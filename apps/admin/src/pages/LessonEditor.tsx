@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { PageHead } from '../components/Layout';
-import { LocalePicker, targetLocales, TranslationEditor, type Locale, type Translations } from '../components/Translations';
+import { LocalePicker, TranslationEditor } from '../components/Translations';
+import { targetLocales, type Locale, type Translations } from '../lib/translations';
 import { Badge, Button, ConfirmButton, Empty, Field, Input, Loading, Select, StatusBadge, Switch, Tabs, Textarea, UploadButton, safeFileName, useToast } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { errMsg, LESSON_TYPES, STATUSES } from '../lib/format';

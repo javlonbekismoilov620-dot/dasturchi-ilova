@@ -116,3 +116,13 @@ test('published courses have published lessons, bodies for reading lessons and h
   }
   assert.deepEqual(problems, []);
 });
+
+test('the orthography checker itself catches planted mistakes and accepts correct text', () => {
+  const flagged = (s) => orthographyIssues(s).length > 0;
+  for (const bad of ["Bu o'zbek tili", 'Maʻlumot bazasi', 'malumotlar bazasi', 'Привет dunyo', 'suniy intellekt', 'Toʼgʼri']) {
+    assert.ok(flagged(bad), `should flag: ${bad}`);
+  }
+  for (const good of ['Toʻgʻri javob', 'Maʼlumot va sunʼiy intellekt', 'Premium tarif', "Kod: `print('o')`", 'HTMLdagi teglar']) {
+    assert.ok(!flagged(good), `should accept: ${good}`);
+  }
+});

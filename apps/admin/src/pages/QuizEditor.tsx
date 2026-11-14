@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 
 import { PageHead } from '../components/Layout';
-import { Badge, Button, ConfirmButton, Empty, Field, Input, Loading, Select, StatusBadge, Textarea, useToast } from '../components/ui';
+import { LocalePicker, TranslationEditor } from '../components/Translations';
+import { targetLocales, type Locale, type Translations } from '../lib/translations';
+import { Badge, Button, ConfirmButton, Empty, Field, Input, Loading, Select, StatusBadge, Tabs, Textarea, useToast } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { errMsg, STATUSES } from '../lib/format';
 import { must, supabase } from '../lib/supabase';
@@ -15,6 +17,7 @@ interface Answer {
   is_correct: boolean;
   feedback_md: string | null;
   position: number;
+  translations?: Translations;
 }
 interface Question {
   id: string;
@@ -25,6 +28,7 @@ interface Question {
   points: number;
   position: number;
   answers: Answer[];
+  translations?: Translations;
 }
 interface Quiz {
   id: string;
@@ -39,6 +43,8 @@ interface Quiz {
   course_id: string;
   lesson_id: string | null;
   questions: Question[];
+  translations?: Translations;
+  course?: { language: string } | null;
 }
 
 /** Server-side grading needs at least one correct answer (single choice: exactly one). */
@@ -60,9 +66,10 @@ export function QuizEditor() {
   const key = ['quiz', id];
   const quiz = useQuery({
     queryKey: key,
-    queryFn: async () => must(await supabase.from('quizzes').select('*, questions(*, answers(*))').eq('id', id!).order('position', { referencedTable: 'questions' }).single()) as Quiz,
+    queryFn: async () => must(await supabase.from('quizzes').select('*, course:courses(language), questions(*, answers(*))').eq('id', id!).order('position', { referencedTable: 'questions' }).single()) as Quiz,
   });
   const [settings, setSettings] = useState<Quiz | null>(null);
+  const [tab, setTab] = useState<'questions' | 'translations'>('questions');
   useEffect(() => {
     if (quiz.data) setSettings(quiz.data);
   }, [quiz.data]);
@@ -106,6 +113,17 @@ export function QuizEditor() {
           </>
         }
       />
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: 'questions', label: 'Questions' },
+          { value: 'translations', label: 'Translations' },
+        ]}
+      />
+      {tab === 'translations' ? (
+        <QuizTranslations quiz={q} questions={questions} onSaved={refresh} />
+      ) : (
       <div className="grid-2" style={{ gridTemplateColumns: 'minmax(0,1fr) 320px', alignItems: 'start' }}>
         <div className="stack">
           {questions.length === 0 && <Empty title="No questions yet" body="Add a question below." />}
@@ -196,7 +214,57 @@ export function QuizEditor() {
           </Button>
         </div>
       </div>
+      )}
     </>
+  );
+}
+
+function QuizTranslations({ quiz, questions, onSaved }: { quiz: Quiz; questions: Question[]; onSaved: () => void }) {
+  const base = quiz.course?.language ?? 'en';
+  const [locale, setLocale] = useState<Locale>(targetLocales(base)[0].code);
+  return (
+    <div className="stack">
+      <div className="card">
+        <LocalePicker value={locale} onChange={setLocale} baseLanguage={base} />
+        <p className="muted small" style={{ marginBottom: 0 }}>
+          Translate the wording only — correct answers, order and scoring stay shared across languages. For short-answer questions, a translated accepted answer is also accepted when grading.
+        </p>
+      </div>
+      <TranslationEditor table="quizzes" row={quiz as never} fields={[{ key: 'title', label: 'Quiz title' }, { key: 'description', label: 'Description' }]} locale={locale} title="Quiz" onSaved={onSaved} />
+      {questions.map((qq, i) => (
+        <div key={qq.id} className="stack" style={{ gap: 8 }}>
+          <TranslationEditor
+            table="questions"
+            row={qq as never}
+            fields={[
+              { key: 'prompt_md', label: 'Question', kind: 'markdown' },
+              { key: 'code_snippet', label: 'Code snippet (translate comments and on-screen text only)', kind: 'markdown' },
+              { key: 'explanation_md', label: 'Explanation shown after answering', kind: 'markdown' },
+            ]}
+            locale={locale}
+            title={`Question ${i + 1}`}
+            onSaved={onSaved}
+          />
+          {[...qq.answers]
+            .sort((a, b) => a.position - b.position)
+            .map((a, j) => (
+              <div key={a.id} style={{ marginLeft: 24 }}>
+                <TranslationEditor
+                  table="answers"
+                  row={a as never}
+                  fields={[
+                    { key: 'label_md', label: qq.type === 'short_answer' ? 'Accepted answer' : 'Option' },
+                    { key: 'feedback_md', label: 'Feedback' },
+                  ]}
+                  locale={locale}
+                  title={`${a.is_correct ? '✓ ' : ''}Option ${j + 1}`}
+                  onSaved={onSaved}
+                />
+              </div>
+            ))}
+        </div>
+      ))}
+    </div>
   );
 }
 

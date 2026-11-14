@@ -111,6 +111,32 @@ const stamp = Date.now().toString(36);
     await shot('course-published');
   });
 
+  await step('translations', async () => {
+    await page.getByRole('link', { name: 'Courses' }).first().click();
+    await page.waitForTimeout(1200);
+    await page.getByText('Computer Fundamentals from Zero', { exact: true }).first().click();
+    await page.waitForTimeout(1500);
+    await page.getByRole('tab', { name: 'Translations' }).click();
+    await page.waitForTimeout(1200);
+    const uzTitle = await tid('tr-courses-title').inputValue();
+    if (uzTitle !== 'Kompyuter asoslari: noldan boshlab') throw new Error(`unexpected Uzbek title “${uzTitle}”`);
+    await shot('translations-uz');
+    await tid('locale-ru').click();
+    await page.waitForTimeout(400);
+    await tid('tr-courses-title').fill('Основы компьютера с нуля');
+    await tid('tr-save-courses').click();
+    await page.getByText('Translation saved').first().waitFor({ timeout: 5000 });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.getByRole('tab', { name: 'Translations' }).click();
+    await tid('locale-ru').click();
+    await page.waitForTimeout(600);
+    if ((await tid('tr-courses-title').inputValue()) !== 'Основы компьютера с нуля') throw new Error('Russian title was not saved');
+    await shot('translations-ru-saved');
+    await page.getByRole('link', { name: 'Translate lesson' }).first().click();
+    await page.waitForTimeout(1500);
+    await shot('lesson-translations');
+  });
+
   for (const [name, label] of [
     ['categories', 'Categories'],
     ['paths', 'Learning paths'],
