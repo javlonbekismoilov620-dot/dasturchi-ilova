@@ -23,6 +23,7 @@ async function ensureChannel() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('learning', {
       name: 'Learning reminders',
+      // eslint-disable-next-line import/namespace -- AndroidImportance is a runtime enum re-exported via `export *`
       importance: Notifications.AndroidImportance.DEFAULT,
       vibrationPattern: [0, 120],
       lightColor: '#E8C07A',

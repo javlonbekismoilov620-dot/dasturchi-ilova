@@ -49,7 +49,12 @@ export function iconFor(key: string | null | undefined, fallback: LucideIcon = S
   return (key && registry[key]) || fallback;
 }
 
+type IconProps = { size: number; color: string; strokeWidth: number };
+const renderers: Record<string, (p: IconProps) => React.JSX.Element> = Object.fromEntries(
+  Object.entries(registry).map(([key, Component]) => [key, (p: IconProps) => <Component {...p} />]),
+);
+const fallback = (p: IconProps) => <Sparkles {...p} />;
+
 export function DynamicIcon({ name, size = 20, color, strokeWidth = 1.75 }: { name: string | null | undefined; size?: number; color: string; strokeWidth?: number }) {
-  const I = iconFor(name);
-  return <I size={size} color={color} strokeWidth={strokeWidth} />;
+  return (renderers[name ?? ''] ?? fallback)({ size, color, strokeWidth });
 }

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability, react-hooks/set-state-in-effect -- imperative player API; component opts out via 'use no memo' */
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Captions, Gauge, Maximize, Pause, Play, RotateCcw, RotateCw, Settings2 } from 'lucide-react-native';
@@ -55,6 +56,9 @@ export interface VideoPlayerProps {
 }
 
 export function VideoPlayer({ video, startAt = 0, title, onHeartbeat, onNearlyComplete }: VideoPlayerProps) {
+  // expo-video is driven imperatively (player.currentTime = …, player.playbackRate = …),
+  // which the React Compiler cannot model; keep this component un-memoised.
+  'use no memo';
   const t = useTheme();
   const { t: tr } = useI18n();
   const prefs = usePreferences();

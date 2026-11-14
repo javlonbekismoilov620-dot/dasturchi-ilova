@@ -7,7 +7,7 @@ import Animated, { FadeIn, LinearTransition, useAnimatedStyle, withSpring } from
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Badge } from '@/components/ui/primitives';
 import { Text } from '@/components/ui/Text';
-import { isLessonLocked } from '@/data/learning';
+import { flattenLessons, isLessonLocked } from '@/data/learning';
 import type { CourseDetail, LessonProgress, LessonType } from '@/data/types';
 import { useI18n } from '@/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -27,7 +27,7 @@ export function Curriculum({ course, progress, isPremium, onLocked }: { course: 
   const done = new Set(progress.filter((p) => p.status === 'completed').map((p) => p.lesson_id));
   const firstOpen = course.modules.findIndex((m) => m.lessons.some((l) => !done.has(l.id)));
   const [open, setOpen] = useState<Set<string>>(() => new Set(course.modules[Math.max(0, firstOpen)] ? [course.modules[Math.max(0, firstOpen)].id] : []));
-  let counter = 0;
+  const numbers = new Map(flattenLessons(course).map((l, i) => [l.id, i + 1]));
 
   return (
     <View style={{ gap: 12 }}>
@@ -63,7 +63,6 @@ export function Curriculum({ course, progress, isPremium, onLocked }: { course: 
             {isOpen && (
               <Animated.View entering={t.reduceMotion ? undefined : FadeIn.duration(220)} style={{ paddingBottom: 6 }}>
                 {m.lessons.map((l) => {
-                  counter += 1;
                   const locked = isLessonLocked(l, course, isPremium);
                   const isDone = done.has(l.id);
                   const Icon = locked ? Lock : isDone ? CircleCheck : lessonIcon[l.type];
@@ -73,7 +72,7 @@ export function Curriculum({ course, progress, isPremium, onLocked }: { course: 
                       scaleTo={0.985}
                       haptic="select"
                       testID={`lesson-row-${l.id}`}
-                      accessibilityLabel={`${tr('lesson.lessonOf', { n: counter, total: course.lesson_count })}: ${l.title}. ${tr(`lessonTypes.${l.type}`)}${isDone ? `. ${tr('lesson.completed')}` : ''}${locked ? `. ${tr('course.locked')}` : ''}`}
+                      accessibilityLabel={`${tr('lesson.lessonOf', { n: numbers.get(l.id) ?? 0, total: numbers.size })}: ${l.title}. ${tr(`lessonTypes.${l.type}`)}${isDone ? `. ${tr('lesson.completed')}` : ''}${locked ? `. ${tr('course.locked')}` : ''}`}
                       onPress={() => (locked ? onLocked() : router.push({ pathname: '/lesson/[id]', params: { id: l.id } }))}
                       style={[styles.lesson, { borderTopColor: t.colors.border }]}>
                       <Icon size={18} color={isDone ? t.colors.success : locked ? t.colors.textTertiary : t.colors.accent} strokeWidth={1.9} />

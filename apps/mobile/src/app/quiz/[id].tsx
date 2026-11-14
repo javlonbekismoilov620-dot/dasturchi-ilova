@@ -170,8 +170,8 @@ export default function QuizScreen() {
   const [dir, setDir] = useState<1 | -1>(1);
   const [responses, setResponses] = useState<QuizResponses>({});
   const [result, setResult] = useState<QuizResult | null>(null);
-  const startedAt = useRef(new Date().toISOString());
-  const [remaining, setRemaining] = useState<number | null>(null);
+  const [startedAtMs, setStartedAtMs] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   const q = quiz.data;
   const questions = useMemo(() => q?.questions ?? [], [q]);
@@ -187,7 +187,7 @@ export default function QuizScreen() {
       const r = await submit.mutateAsync({
         quizId: q.id,
         responses,
-        startedAt: startedAt.current,
+        startedAt: new Date(startedAtMs).toISOString(),
         hadCertificate: !!certificates.data?.some((c) => c.course_id === q.course_id),
       });
       setResult(r);
@@ -196,16 +196,27 @@ export default function QuizScreen() {
     }
   };
 
-  // Optional time limit.
+  // Optional time limit: remaining time is derived from the start time and a ticking
+  // clock; when it runs out the timer callback submits the latest answers.
+  const limit = q?.time_limit_seconds ?? null;
+  const submitRef = useRef(doSubmit);
   useEffect(() => {
-    if (!q?.time_limit_seconds || result) return;
-    setRemaining(q.time_limit_seconds);
-    const idTimer = setInterval(() => setRemaining((r) => (r === null ? r : r - 1)), 1000);
+    submitRef.current = doSubmit;
+  });
+  useEffect(() => {
+    if (!limit || result) return;
+    const deadline = startedAtMs + limit * 1000;
+    const idTimer = setInterval(() => {
+      const nowMs = Date.now();
+      setNow(nowMs);
+      if (nowMs >= deadline) {
+        clearInterval(idTimer);
+        void submitRef.current();
+      }
+    }, 1000);
     return () => clearInterval(idTimer);
-  }, [q?.time_limit_seconds, result]);
-  useEffect(() => {
-    if (remaining === 0 && !result && !submit.isPending) void doSubmit();
-  }, [remaining]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [limit, result, startedAtMs]);
+  const remaining = limit ? Math.max(0, Math.ceil((startedAtMs + limit * 1000 - now) / 1000)) : null;
 
   if (quiz.isLoading) {
     return (
@@ -238,7 +249,8 @@ export default function QuizScreen() {
             setResult(null);
             setResponses({});
             setIndex(0);
-            startedAt.current = new Date().toISOString();
+            setStartedAtMs(Date.now());
+            setNow(Date.now());
             void quiz.refetch();
           }}
         />

@@ -21,7 +21,7 @@ export function AnimatedSplash({ ready }: { ready: boolean }) {
   const t = useTheme();
   const { t: tr } = useI18n();
   const [visible, setVisible] = useState(true);
-  const [introDone, setIntroDone] = useState(false);
+  const [introDone, setIntroDone] = useState(t.reduceMotion);
   const word = useSharedValue(0);
   const exit = useSharedValue(0);
 
@@ -30,7 +30,6 @@ export function AnimatedSplash({ ready }: { ready: boolean }) {
     SplashScreen.hideAsync().catch(() => {});
     if (t.reduceMotion) {
       word.value = 1;
-      setIntroDone(true);
       return;
     }
     word.value = withDelay(650, withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) }));

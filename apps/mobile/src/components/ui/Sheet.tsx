@@ -16,31 +16,34 @@ export function Sheet({ visible, onClose, title, children, maxHeightRatio = 0.86
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  // Stay mounted while the exit animation runs ("adjust state when a prop changes").
   const [mounted, setMounted] = useState(visible);
+  if (visible && !mounted) setMounted(true);
   const y = useSharedValue(height);
   const backdrop = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
-      setMounted(true);
-      y.value = height;
-      y.value = t.reduceMotion ? withTiming(0, { duration: 160 }) : withSpring(0, { damping: 22, stiffness: 220, mass: 0.9 });
-      backdrop.value = withTiming(1, { duration: 220 });
-    } else if (mounted) {
-      backdrop.value = withTiming(0, { duration: 180 });
-      y.value = withTiming(height, { duration: 220 }, (done) => {
-        if (done) runOnJS(setMounted)(false);
-      });
+      y.set(height);
+      y.set(t.reduceMotion ? withTiming(0, { duration: 160 }) : withSpring(0, { damping: 22, stiffness: 220, mass: 0.9 }));
+      backdrop.set(withTiming(1, { duration: 220 }));
+    } else {
+      backdrop.set(withTiming(0, { duration: 180 }));
+      y.set(
+        withTiming(height, { duration: 220 }, (done) => {
+          if (done) runOnJS(setMounted)(false);
+        }),
+      );
     }
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
-      y.value = Math.max(0, e.translationY);
+      y.set(Math.max(0, e.translationY));
     })
     .onEnd((e) => {
       if (e.translationY > 120 || e.velocityY > 900) runOnJS(onClose)();
-      else y.value = withSpring(0, { damping: 22, stiffness: 240 });
+      else y.set(withSpring(0, { damping: 22, stiffness: 240 }));
     });
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));

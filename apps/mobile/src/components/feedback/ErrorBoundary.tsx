@@ -1,9 +1,8 @@
 import type { ErrorBoundaryProps } from 'expo-router';
 import { RefreshCw } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, Text as RNText, StyleSheet, View } from 'react-native';
 
 import { colors, typography } from '@/theme/tokens';
-import { Text as RNText, Pressable } from 'react-native';
 
 /**
  * Route-level error boundary. Deliberately independent of providers (it can render

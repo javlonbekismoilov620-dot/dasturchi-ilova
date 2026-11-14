@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OptionCard } from '@/components/onboarding/OptionCard';
@@ -12,7 +12,7 @@ import { TextField } from '@/components/ui/TextField';
 import { toast } from '@/components/ui/Toast';
 import { iconFor } from '@/components/ui/Icon';
 import { useCategories, useProfile, useUpdateProfile } from '@/data/hooks';
-import type { DifficultyLevel } from '@/data/types';
+import type { DifficultyLevel, Profile } from '@/data/types';
 import { errorMessageKey } from '@/lib/errors';
 import { useI18n } from '@/i18n';
 import { usePreferences } from '@/stores/preferences';
@@ -22,25 +22,28 @@ const LEVELS: DifficultyLevel[] = ['zero', 'beginner', 'intermediate', 'advanced
 
 export default function EditProfile() {
   const t = useTheme();
+  const profile = useProfile();
+  if (!profile.data) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.colors.background }}>
+        <ActivityIndicator color={t.colors.accent} />
+      </View>
+    );
+  }
+  return <ProfileForm key={profile.data.id} profile={profile.data} />;
+}
+
+function ProfileForm({ profile }: { profile: Profile }) {
+  const t = useTheme();
   const { t: tr } = useI18n();
   const insets = useSafeAreaInsets();
-  const profile = useProfile();
   const categories = useCategories();
   const update = useUpdateProfile();
   const setPrefs = usePreferences((s) => s.set);
-  const [name, setName] = useState('');
-  const [bio, setBio] = useState('');
-  const [level, setLevel] = useState<DifficultyLevel>('zero');
-  const [interests, setInterests] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (profile.data) {
-      setName(profile.data.display_name ?? '');
-      setBio(profile.data.bio ?? '');
-      setLevel(profile.data.experience_level);
-      setInterests(profile.data.interests);
-    }
-  }, [profile.data]);
+  const [name, setName] = useState(profile.display_name ?? '');
+  const [bio, setBio] = useState(profile.bio ?? '');
+  const [level, setLevel] = useState<DifficultyLevel>(profile.experience_level);
+  const [interests, setInterests] = useState<string[]>(profile.interests);
 
   const save = async () => {
     try {

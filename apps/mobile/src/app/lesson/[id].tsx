@@ -63,7 +63,9 @@ const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60
 function useEngagedTime(enabled: boolean, onFlush: (seconds: number) => void) {
   const acc = useRef(0);
   const flushRef = useRef(onFlush);
-  flushRef.current = onFlush;
+  useEffect(() => {
+    flushRef.current = onFlush;
+  }, [onFlush]);
   useEffect(() => {
     if (!enabled) return;
     let active = AppState.currentState === 'active';
@@ -111,6 +113,7 @@ export default function LessonScreen() {
   const quiz = useQuiz(content.data?.quiz_id);
   const [notesOpen, setNotesOpen] = useState(false);
   const positionRef = useRef(0);
+  const [videoPosition, setVideoPosition] = useState(0);
 
   const nav = useMemo(() => (course.data && id ? adjacentLessons(course.data, id) : null), [course.data, id]);
   const lesson = nav?.lesson;
@@ -236,6 +239,7 @@ export default function LessonScreen() {
                 startAt={lp?.position_seconds ?? 0}
                 onHeartbeat={(pos, spent) => {
                   positionRef.current = pos;
+                  setVideoPosition(pos);
                   heartbeat(spent, pos);
                 }}
                 onNearlyComplete={() => !isDone && user && complete()}
@@ -349,7 +353,7 @@ export default function LessonScreen() {
         </View>
       </View>
 
-      <NotesSheet lessonId={id!} visible={notesOpen} onClose={() => setNotesOpen(false)} position={c.video ? positionRef.current : null} />
+      <NotesSheet lessonId={id!} visible={notesOpen} onClose={() => setNotesOpen(false)} position={c.video ? videoPosition : null} />
     </KeyboardAvoidingView>
   );
 }
