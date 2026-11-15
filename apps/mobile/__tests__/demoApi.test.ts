@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createDemoApi, migrateLegacyIds, resetDemoState, setDemoPremium } from '@/data/demo/demoApi';
 import catalog from '@/data/demo/catalog.json';
 import { localizeContent, UNTRANSLATED } from '@/i18n/content';
@@ -133,5 +134,23 @@ describe('demo mode engine (mirrors the SQL engine)', () => {
     expect(migrated.attempts[0].quiz_id).toBe(newId);
     const current = JSON.stringify({ progress: { [legacy[oldLesson]]: {} } });
     expect(migrateLegacyIds(current)).toBe(current);
+  });
+  it('ignores saved progress for lessons that are not in the catalog', async () => {
+    const course = (await api.getCourse('computer-fundamentals-from-zero'))!;
+    const lesson = course.modules[0].lessons[0];
+    await api.recordProgress(lesson.id, { completed: true });
+    const raw = JSON.parse((await AsyncStorage.getItem('mahorat.demo.state.v1'))!);
+    raw.progress['00000000-0000-4000-8000-0000000000ff'] = { ...raw.progress[lesson.id], lesson_id: '00000000-0000-4000-8000-0000000000ff' };
+    // A fresh engine (as after an app restart) loading that saved state.
+    let recent: { lesson_id: string }[] = [];
+    await jest.isolateModulesAsync(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- a fresh module instance is the point
+      const mod = require('@react-native-async-storage/async-storage') as { default?: typeof AsyncStorage } & typeof AsyncStorage;
+      await (mod.default ?? mod).setItem('mahorat.demo.state.v1', JSON.stringify(raw));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- loaded after the storage above is seeded
+      const { createDemoApi: create } = require('@/data/demo/demoApi') as typeof import('@/data/demo/demoApi');
+      recent = await create().getRecentLessons();
+    });
+    expect(recent.map((r) => r.lesson_id)).toEqual([lesson.id]);
   });
 });

@@ -605,6 +605,8 @@ export function createDemoApi(): LearningApi {
     async getRecentLessons(limit = 10) {
       const s = await load();
       return Object.values(s.progress)
+        // Skip progress for lessons that are not in this catalog (like getEnrollments does).
+        .filter((p) => courseById.has(lessonById.get(p.lesson_id)?.course_id ?? ''))
         .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
         .slice(0, limit)
         .map((p) => {
