@@ -43,6 +43,18 @@ const quizLessonId = catalog.lessons.find((l) => l.title === 'Check your underst
         return !!top && (e.contains(top) || top.contains(e));
       });
     }, text);
+  // Like visibleText, but scrolls each candidate into view first (for content below the fold).
+  const textOnScroll = async (text) =>
+    page.evaluate((t) => {
+      const els = [...document.querySelectorAll('div, span, h1, h2, h3, p')].filter((e) => e.childElementCount === 0 && e.textContent.includes(t));
+      return els.some((e) => {
+        if (!e.getBoundingClientRect().width) return false;
+        e.scrollIntoView({ block: 'center' });
+        const r = e.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return !!top && (e.contains(top) || top.contains(e));
+      });
+    }, text);
   const onTop = async (testId) =>
     page.evaluate((id) => [...document.querySelectorAll(`[data-testid="${id}"]`)].some((e) => {
       const r = e.getBoundingClientRect();
@@ -115,7 +127,7 @@ const quizLessonId = catalog.lessons.find((l) => l.title === 'Check your underst
   await go('/course/computer-fundamentals-from-zero');
   check('ru: interface in Russian', await visibleText('О курсе') || await visibleText('Программа курса') || await visibleText('Продолжить'));
   check('ru: content falls back to the original', await visibleText('Computer Fundamentals from Zero'));
-  check('ru: fallback notice shown', await visibleText('Перевод готовится'));
+  check('ru: fallback notice shown', await textOnScroll('Перевод готовится'));
   const ruProgress = await progressText();
   check('ru: progress unchanged after switching', ruProgress === uzProgress, `${ruProgress}% vs ${uzProgress}%`);
   await shot('ru-course');
@@ -138,7 +150,7 @@ const quizLessonId = catalog.lessons.find((l) => l.title === 'Check your underst
   await switchLanguage('Язык', 'English');
   await go('/course/computer-fundamentals-from-zero');
   check('en: course title in English', await visibleText('Computer Fundamentals from Zero'));
-  check('en: no fallback notice', !(await visibleText('Translation is being prepared')) && !(await onTop('untranslated-notice')));
+  check('en: no fallback notice', !(await textOnScroll('Translation is being prepared')) && !(await onTop('untranslated-notice')));
   check('en: no lesson-language badges on English courses', !(await page.evaluate(() => document.body.innerText)).includes('Lessons: English'));
   check('en: progress unchanged', (await progressText()) === uzProgress);
   await shot('en-course');

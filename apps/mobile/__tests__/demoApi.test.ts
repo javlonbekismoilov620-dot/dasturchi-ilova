@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { createDemoApi, resetDemoState, setDemoPremium } from '@/data/demo/demoApi';
+import { createDemoApi, migrateLegacyIds, resetDemoState, setDemoPremium } from '@/data/demo/demoApi';
 import catalog from '@/data/demo/catalog.json';
+import { localizeContent, UNTRANSLATED } from '@/i18n/content';
 
-type Q = { id: string; title: string; questions: { id: string; type: string; answers: { id: string; label_md: string; is_correct: boolean }[] }[] };
+type Q = { id: string; title: string; course_id: string; kind: string; questions: { id: string; type: string; answers: { id: string; label_md: string; is_correct: boolean }[] }[] };
 const quizzes = (catalog as unknown as { quizzes: Q[] }).quizzes;
 const keyFor = (title: string) => {
   const q = quizzes.find((x) => x.title === title)!;
@@ -53,10 +54,18 @@ describe('demo mode engine (mirrors the SQL engine)', () => {
 
   it('completes a course only after the final assessment; certificate needs premium', async () => {
     const course = (await api.getCourse('computer-fundamentals-from-zero'))!;
-    for (const l of course.modules.flatMap((m) => m.lessons).filter((l) => l.type !== 'quiz')) {
+    const lessons = course.modules.flatMap((m) => m.lessons);
+    for (const l of lessons.filter((l) => !['quiz', 'project', 'assignment'].includes(l.type))) {
       await api.recordProgress(l.id, { completed: true });
     }
-    await api.submitQuiz(keyFor('Module 1 check').id, keyFor('Module 1 check').correct);
+    const project = lessons.find((l) => l.type === 'project')!;
+    await expect(api.recordProgress(project.id, { completed: true })).rejects.toThrow('complete_via_submission');
+    const assignment = (catalog as unknown as { assignments: { id: string; lesson_id: string }[] }).assignments.find((a) => a.lesson_id === project.id)!;
+    await api.submitAssignment(assignment.id, { body: 'My plan for a family computer' });
+    for (const q of quizzes.filter((q) => q.course_id === course.id && q.kind === 'knowledge_check')) {
+      const k = keyFor(q.title);
+      expect((await api.submitQuiz(k.id, k.correct)).passed).toBe(true);
+    }
     let [enr] = await api.getEnrollments();
     expect(enr.status).toBe('active');
     const fin = keyFor('Computer Fundamentals — final assessment');
@@ -71,5 +80,58 @@ describe('demo mode engine (mirrors the SQL engine)', () => {
     const stats = await api.getStats();
     expect(stats.current_streak).toBe(1);
     expect(stats.certificates).toBe(1);
+  });
+  it('every published course opens in Uzbek and completes end to end, only after its final assessment', async () => {
+    await setDemoPremium(true);
+    const all = catalog as unknown as { courses: { id: string; slug: string; status: string }[]; assignments: { id: string; lesson_id: string | null; course_id: string }[] };
+    const published = all.courses.filter((c) => c.status === 'published');
+    expect(published).toHaveLength(8);
+    for (const { slug } of published) {
+      const course = (await api.getCourse(slug))!;
+      const lessons = course.modules.flatMap((m) => m.lessons);
+      for (const l of lessons) {
+        const content = await api.getLessonContent(l.id);
+        if (content.body_md) {
+          const uz = localizeContent(content, 'uz') as unknown as Record<string, unknown>;
+          expect([slug, l.title, uz[UNTRANSLATED] ?? false]).toEqual([slug, l.title, false]);
+        }
+      }
+      for (const l of lessons.filter((x) => !['quiz', 'project', 'assignment'].includes(x.type))) {
+        await api.recordProgress(l.id, { completed: true });
+      }
+      for (const a of all.assignments.filter((x) => x.course_id === course.id)) {
+        await api.submitAssignment(a.id, { body: 'My finished project', url: 'https://example.com/project' });
+      }
+      const courseQuizzes = quizzes.filter((q) => q.course_id === course.id);
+      for (const q of courseQuizzes.filter((x) => x.kind !== 'final_assessment')) {
+        const k = keyFor(q.title);
+        expect([slug, q.title, (await api.submitQuiz(k.id, k.correct)).passed]).toEqual([slug, q.title, true]);
+      }
+      const before = (await api.getEnrollments()).find((e) => e.course_id === course.id)!;
+      expect([slug, before.status]).toEqual([slug, 'active']);
+      const finals = courseQuizzes.filter((x) => x.kind === 'final_assessment');
+      expect(finals.length).toBeGreaterThan(0);
+      for (const q of finals) {
+        const k = keyFor(q.title);
+        expect((await api.submitQuiz(k.id, k.wrong)).passed).toBe(false);
+        expect((await api.submitQuiz(k.id, k.correct)).passed).toBe(true);
+      }
+      const after = (await api.getEnrollments()).find((e) => e.course_id === course.id)!;
+      expect([slug, after.status, after.progress_percent]).toEqual([slug, 'completed', 100]);
+    }
+    const certs = await api.getCertificates();
+    expect(certs).toHaveLength(8);
+  }, 120_000);
+  it('carries progress saved by an older build over to the current IDs', () => {
+    const legacy = (catalog as unknown as { legacyIds: Record<string, string> }).legacyIds;
+    const [oldId, newId] = Object.entries(legacy)[0];
+    const lessonIds = new Set((catalog as unknown as { lessons: { id: string }[] }).lessons.map((l) => l.id));
+    const oldLesson = Object.keys(legacy).find((k) => lessonIds.has(legacy[k]))!;
+    const saved = JSON.stringify({ progress: { [oldLesson]: { lesson_id: oldLesson, status: 'completed' } }, attempts: [{ quiz_id: oldId }] });
+    const migrated = JSON.parse(migrateLegacyIds(saved));
+    expect(migrated.progress[legacy[oldLesson]].lesson_id).toBe(legacy[oldLesson]);
+    expect(migrated.attempts[0].quiz_id).toBe(newId);
+    const current = JSON.stringify({ progress: { [legacy[oldLesson]]: {} } });
+    expect(migrateLegacyIds(current)).toBe(current);
   });
 });

@@ -262,10 +262,24 @@ test('Uzbek translations: served with content, gated like the base text, graded 
 
 test('course completion → certificate requires premium → verification', async () => {
   const course = ids['computer-fundamentals-from-zero'];
-  const articles = ids.lessons.filter((l) => l.course_id === course && l.status === 'published' && l.type !== 'quiz');
-  for (const l of articles) {
+  // Reading lessons complete directly; quizzes only by passing them; projects only by submitting.
+  const reading = ids.lessons.filter((l) => l.course_id === course && l.status === 'published' && !['quiz', 'project', 'assignment'].includes(l.type));
+  for (const l of reading) {
     const { error } = await student.client.rpc('record_lesson_progress', { p_lesson_id: l.id, p_completed: true });
     assert.ifError(error);
+  }
+  const project = ids.lessons.find((l) => l.course_id === course && l.status === 'published' && l.type === 'project');
+  const { error: viaProgress } = await student.client.rpc('record_lesson_progress', { p_lesson_id: project.id, p_completed: true });
+  assert.match(viaProgress.message, /complete_via_submission/, 'projects complete only through a submission');
+  const { data: assignment } = await admin.from('assignments').select('id').eq('lesson_id', project.id).single();
+  const { error: subErr } = await student.client.rpc('submit_assignment', { p_assignment_id: assignment.id, p_body_md: 'My plan for a family computer…' });
+  assert.ifError(subErr);
+  const { data: checks } = await admin.from('quizzes').select('title').eq('course_id', course).eq('kind', 'knowledge_check').eq('status', 'published');
+  for (const { title } of checks) {
+    const { quizId, correct } = await answerKey(title);
+    const { data: res, error: qErr } = await student.client.rpc('submit_quiz_attempt', { p_quiz_id: quizId, p_responses: correct });
+    assert.ifError(qErr);
+    assert.equal(res.passed, true, `${title} passed`);
   }
   let { data: enr } = await student.client.from('enrollments').select('*').eq('course_id', course).single();
   assert.equal(enr.status, 'active', 'final assessment still required');
@@ -304,6 +318,56 @@ test('course completion → certificate requires premium → verification', asyn
   assert.ok(notes.some((n) => n.title === 'Certificate earned'));
 });
 
+test('every published course can be completed end to end, and only at the very end', async () => {
+  const learner = await makeUser('finisher');
+  const { error: grantErr } = await adminUser.client.rpc('admin_grant_premium', { p_user_id: learner.id, p_days: 30, p_note: 'test' });
+  assert.ifError(grantErr);
+  const { data: courses } = await admin.from('courses').select('id, slug, title').eq('status', 'published').order('slug');
+  assert.equal(courses.length, 8);
+  for (const course of courses) {
+    const { data: lessons } = await admin.from('lessons').select('id, title, type').eq('course_id', course.id).eq('status', 'published');
+    const { data: quizzes } = await admin.from('quizzes').select('title, kind').eq('course_id', course.id).eq('status', 'published');
+    const { data: assignments } = await admin.from('assignments').select('id, lesson_id, submission_type').eq('course_id', course.id).eq('status', 'published');
+    assert.ok(quizzes.some((q) => q.kind === 'final_assessment'), `${course.slug}: has a final assessment`);
+    assert.ok(assignments.length > 0, `${course.slug}: has a project`);
+
+    for (const l of lessons.filter((x) => !['quiz', 'project', 'assignment'].includes(x.type))) {
+      const { error } = await learner.client.rpc('record_lesson_progress', { p_lesson_id: l.id, p_completed: true });
+      assert.ifError(error, `${course.slug}: ${l.title}`);
+    }
+    for (const a of assignments) {
+      const { error } = await learner.client.rpc('submit_assignment', {
+        p_assignment_id: a.id, p_body_md: 'My finished project and what I learned.',
+        p_url: a.submission_type === 'url' ? 'https://example.com/my-project' : null,
+      });
+      assert.ifError(error, `${course.slug}: submit project`);
+    }
+    for (const q of quizzes.filter((x) => x.kind !== 'final_assessment')) {
+      const { quizId, correct } = await answerKey(q.title);
+      const { data: res, error } = await learner.client.rpc('submit_quiz_attempt', { p_quiz_id: quizId, p_responses: correct });
+      assert.ifError(error);
+      assert.equal(res.passed, true, `${course.slug}: ${q.title} passes with the key`);
+    }
+    const { data: before } = await learner.client.from('enrollments').select('status, progress_percent').eq('course_id', course.id).single();
+    assert.equal(before.status, 'active', `${course.slug}: not complete before the final assessment`);
+
+    for (const q of quizzes.filter((x) => x.kind === 'final_assessment')) {
+      const { quizId, correct, wrong } = await answerKey(q.title);
+      const { data: failed } = await learner.client.rpc('submit_quiz_attempt', { p_quiz_id: quizId, p_responses: wrong });
+      assert.equal(failed.passed, false, `${course.slug}: wrong answers fail the final assessment`);
+      const { data: res } = await learner.client.rpc('submit_quiz_attempt', { p_quiz_id: quizId, p_responses: correct });
+      assert.equal(res.passed, true);
+    }
+    const { data: after } = await learner.client.from('enrollments').select('status, progress_percent').eq('course_id', course.id).single();
+    assert.deepEqual(after, { status: 'completed', progress_percent: 100 }, course.slug);
+    const { data: done } = await learner.client.from('lesson_progress').select('lesson_id').eq('course_id', course.id).eq('status', 'completed');
+    assert.equal(done.length, lessons.length, `${course.slug}: every lesson recorded as completed`);
+    const { data: cert, error: certErr } = await learner.client.rpc('claim_certificate', { p_course_id: course.id });
+    assert.ifError(certErr);
+    assert.equal(cert.course_id, course.id);
+  }
+});
+
 test('bookmarks and notes are private', async () => {
   const lesson = lessonByTitle('Hardware and software');
   const { data: b, error } = await student.client.from('bookmarks').insert({ lesson_id: lesson.id, user_id: student.id, position_seconds: 42, label: 'RAM table' }).select().single();
@@ -315,9 +379,15 @@ test('bookmarks and notes are private', async () => {
   assert.equal(theirs.length, 0);
   const { error: spoof } = await student2.client.from('lesson_notes').insert({ lesson_id: lesson.id, user_id: student.id, body: 'spoof' });
   assert.ok(spoof);
-  const draft = ids.lessons.find((l) => l.status === 'draft');
+  // Every seeded lesson is published now, so plant an unpublished one for this check.
+  const { data: draft, error: draftErr } = await admin.from('lessons')
+    .insert({ module_id: (await admin.from('lessons').select('module_id').eq('id', lesson.id).single()).data.module_id,
+      course_id: lesson.course_id, title: 'Unpublished test lesson', position: 999, status: 'draft' })
+    .select('id').single();
+  assert.ifError(draftErr);
   const { error: draftBm } = await student.client.from('bookmarks').insert({ lesson_id: draft.id, user_id: student.id });
   assert.ok(draftBm, 'cannot bookmark unpublished lesson');
+  await admin.from('lessons').delete().eq('id', draft.id);
 });
 
 test('assignments: submission, file upload scoping, review workflow', async () => {

@@ -1,9 +1,15 @@
 // Exports the published starter catalog from a local Supabase (seeded via
 // `npx supabase db reset`) into the bundle used by demo mode. Demo mode therefore
 // shows exactly the same starter content as the real backend — nothing is invented here.
-//   node apps/mobile/scripts/export-demo-catalog.mjs
+//   node apps/mobile/scripts/export-demo-catalog.mjs [--legacy <older catalog.json>]
+//
+// IDs stay stable across exports. A fresh `db reset` gives every row a new random UUID, but
+// demo progress on a device is keyed by these IDs, so every item that already exists in the
+// current catalog keeps its ID (matched by a natural key such as course slug + lesson title).
+// `--legacy` adds an older catalog's IDs to `legacyIds`, which demo mode uses to carry
+// progress saved by an older build over to the current IDs.
 import { execSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
@@ -48,6 +54,60 @@ const catalog = {
   achievements: await q(db.from('achievements').select('*').eq('is_active', true).order('position')),
   plans: await q(db.from('subscription_plans').select('*').eq('is_active', true).order('position')),
 };
+// ---- Stable IDs ------------------------------------------------------------
+// Natural keys for every entity that carries its own ID.
+function naturalKeys(cat) {
+  const keys = new Map(); // id -> natural key
+  const slugOf = new Map(cat.courses.map((c) => [c.id, c.slug]));
+  const put = (id, key) => id && keys.set(id, key);
+  for (const x of cat.categories) put(x.id, `category|${x.slug}`);
+  for (const x of cat.instructors) put(x.id, `instructor|${x.slug}`);
+  for (const x of cat.courses) put(x.id, `course|${x.slug}`);
+  for (const x of cat.modules) put(x.id, `module|${slugOf.get(x.course_id)}|${x.title}`);
+  for (const x of cat.lessons) put(x.id, `lesson|${slugOf.get(x.course_id)}|${x.title}`);
+  for (const x of cat.assignments) put(x.id, `assignment|${slugOf.get(x.course_id)}|${x.title}`);
+  for (const x of cat.paths) put(x.id, `path|${x.slug}`);
+  for (const x of cat.achievements) put(x.id, `achievement|${x.slug}`);
+  for (const x of cat.plans) put(x.id, `plan|${x.slug}`);
+  for (const quiz of cat.quizzes) {
+    const qk = `quiz|${slugOf.get(quiz.course_id)}|${quiz.title}`;
+    put(quiz.id, qk);
+    for (const question of quiz.questions) {
+      put(question.id, `${qk}|q${question.position}`);
+      for (const answer of question.answers) put(answer.id, `${qk}|q${question.position}|a${answer.position}`);
+    }
+  }
+  return keys;
+}
+const invert = (m) => new Map([...m].map(([id, key]) => [key, id]));
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+const remap = (json, map) => json.replace(UUID, (id) => map.get(id) ?? id);
+
 const out = join(here, '../src/data/demo/catalog.json');
-writeFileSync(out, JSON.stringify(catalog));
+const previous = existsSync(out) ? JSON.parse(readFileSync(out, 'utf8')) : null;
+let json = JSON.stringify(catalog);
+let legacyIds = { ...(previous?.legacyIds ?? {}) };
+if (previous) {
+  const prevByKey = invert(naturalKeys(previous));
+  const toPrevious = new Map();
+  for (const [id, key] of naturalKeys(catalog)) if (prevByKey.has(key)) toPrevious.set(id, prevByKey.get(key));
+  json = remap(json, toPrevious);
+  const kept = new Set(toPrevious.values());
+  const dropped = [...prevByKey].filter(([, id]) => !kept.has(id)).map(([key]) => key);
+  console.log(`stable IDs: kept ${kept.size} of ${prevByKey.size} existing IDs${dropped.length ? `; no longer present: ${dropped.join(', ')}` : ''}`);
+}
+const legacyArg = process.argv.indexOf('--legacy');
+if (legacyArg > 0) {
+  const older = JSON.parse(readFileSync(process.argv[legacyArg + 1], 'utf8'));
+  const currentByKey = invert(naturalKeys(JSON.parse(json)));
+  let added = 0;
+  for (const [oldId, key] of naturalKeys(older)) {
+    const id = currentByKey.get(key);
+    if (id && id !== oldId) { legacyIds[oldId] = id; added += 1; }
+  }
+  console.log(`legacy IDs: mapped ${added} IDs from ${process.argv[legacyArg + 1]}`);
+}
+const final = JSON.parse(json);
+final.legacyIds = legacyIds;
+writeFileSync(out, JSON.stringify(final));
 console.log(`wrote ${out}: ${courses.length} courses, ${lessons.length} lessons, ${quizzes.length} quizzes`);

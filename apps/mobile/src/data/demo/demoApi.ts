@@ -49,6 +49,7 @@ function pickTranslations(t: Translations | undefined, fields: string[]): Transl
 type DemoQuiz = Omit<Quiz, 'questions' | 'attempts_used' | 'best_score' | 'passed'> & { module_id: string | null; shuffle_questions: boolean; questions: DemoQuestion[] };
 
 const catalog = rawCatalog as unknown as {
+  legacyIds?: Record<string, string>;
   settings: PublicSettings;
   categories: Category[];
   instructors: Instructor[];
@@ -134,11 +135,18 @@ function freshState(): DemoState {
 let state: DemoState | null = null;
 let lastActive: string | null = null;
 
+// Progress saved by an older build may use IDs from an older catalog export; the export keeps
+// a map of those to the current IDs, so nothing a learner has done is lost on an update.
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+export function migrateLegacyIds(raw: string, legacy: Record<string, string> = catalog.legacyIds ?? {}) {
+  return raw.replace(UUID, (id) => legacy[id] ?? id);
+}
+
 async function load(): Promise<DemoState> {
   if (state) return state;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as DemoState & { lastActive?: string | null }) : null;
+    const parsed = raw ? (JSON.parse(migrateLegacyIds(raw)) as DemoState & { lastActive?: string | null }) : null;
     state = parsed ? { ...freshState(), ...parsed } : freshState();
     lastActive = parsed?.lastActive ?? null;
   } catch {
@@ -625,6 +633,10 @@ export function createDemoApi(): LearningApi {
       let newly = false;
       if (input.completed) {
         if (lesson.type === 'quiz') throw new AppError('complete_via_quiz');
+        // Like the server: a lesson with a published assignment completes only through a submission.
+        if ((lesson.type === 'assignment' || lesson.type === 'project') && catalog.assignments.some((a) => a.lesson_id === lessonId)) {
+          throw new AppError('complete_via_submission');
+        }
         newly = completeLesson(s, lessonId);
       }
       const ach = evaluateAchievements(s);
