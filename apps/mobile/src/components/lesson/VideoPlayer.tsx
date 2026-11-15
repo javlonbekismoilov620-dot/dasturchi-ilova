@@ -286,7 +286,7 @@ function OverlayButton({ icon: Icon, label, onPress, text, size = 36, active }: 
   );
 }
 
-export function OptionList({ options, selected, onSelect }: { options: { key: string; label: string }[]; selected: string; onSelect: (k: string) => void }) {
+export function OptionList({ options, selected, onSelect }: { options: { key: string; label: string; description?: string }[]; selected: string; onSelect: (k: string) => void }) {
   const t = useTheme();
   return (
     <View style={{ paddingHorizontal: 16, gap: 6 }}>
@@ -302,6 +302,11 @@ export function OptionList({ options, selected, onSelect }: { options: { key: st
             <Text variant="bodyStrong" tone={isSel ? 'accent' : 'primary'}>
               {o.label}
             </Text>
+            {o.description ? (
+              <Text variant="footnote" tone="secondary">
+                {o.description}
+              </Text>
+            ) : null}
           </Pressable>
         );
       })}

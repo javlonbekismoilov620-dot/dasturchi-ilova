@@ -9,7 +9,9 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { Card } from '@/components/ui/primitives';
 import { Text } from '@/components/ui/Text';
 import { isDemoMode } from '@/lib/env';
+import { Button } from '@/components/ui/Button';
 import { useI18n } from '@/i18n';
+import { usePreferences } from '@/stores/preferences';
 import { useTheme } from '@/theme/ThemeProvider';
 
 /** Persistent, honest label shown whenever the app runs on bundled demo content. */
@@ -86,6 +88,37 @@ export function UntranslatedNotice({ baseLanguage }: { baseLanguage?: string | n
         </Text>
       </View>
     </Card>
+    </View>
+  );
+}
+
+/**
+ * Russian is an interface language for now. Russian-speaking learners are told plainly,
+ * once on Home, that lesson content is in English and Uzbek — English lessons are never
+ * presented as Russian translations.
+ */
+export function RussianContentNotice() {
+  const t = useTheme();
+  const { t: tr, locale } = useI18n();
+  const dismissed = usePreferences((s) => s.ruContentNoticeDismissed);
+  const set = usePreferences((s) => s.set);
+  if (locale !== 'ru' || dismissed) return null;
+  return (
+    <View style={{ marginHorizontal: t.spacing.gutter }} testID="ru-content-notice">
+      <Card style={{ gap: 10, backgroundColor: t.colors.surface, borderColor: t.colors.border }}>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+          <Languages size={18} color={t.colors.accent} />
+          <Text variant="headline" style={{ flex: 1 }}>
+            {tr('content.ruNoticeTitle')}
+          </Text>
+        </View>
+        <Text variant="footnote" tone="secondary">
+          {tr('content.ruNoticeBody')}
+        </Text>
+        <View style={{ alignSelf: 'flex-start' }}>
+          <Button title={tr('content.gotIt')} size="sm" variant="secondary" onPress={() => set({ ruContentNoticeDismissed: true })} testID="ru-content-notice-dismiss" />
+        </View>
+      </Card>
     </View>
   );
 }

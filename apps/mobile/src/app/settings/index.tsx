@@ -259,7 +259,11 @@ export default function Settings() {
       </Sheet>
       <Sheet visible={sheet === 'language'} onClose={() => setSheet(null)} title={tr('settings.language')}>
         <OptionList
-          options={[{ key: 'system', label: tr('settings.languageSystem') }, ...LOCALES.map((l) => ({ key: l.code, label: l.nativeName }))]}
+          options={[
+            { key: 'system', label: tr('settings.languageSystem') },
+            // Russian is an interface language for now; say so before anyone picks it.
+            ...LOCALES.map((l) => ({ key: l.code, label: l.nativeName, description: l.code === 'ru' ? tr('content.interfaceOnly') : undefined })),
+          ]}
           selected={prefs.locale ?? 'system'}
           onSelect={(k) => {
             const next = k === 'system' ? null : (k as 'en' | 'uz' | 'ru');

@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, SlideInLeft, SlideInRight, SlideOutLeft, SlideOutRight } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { UntranslatedNotice } from '@/components/feedback/Banners';
 import { Aurora } from '@/components/brand/Aurora';
 import { CodeBlock } from '@/components/lesson/CodeBlock';
 import { InlineMarkdown, Markdown } from '@/components/lesson/Markdown';
@@ -291,6 +292,7 @@ export default function QuizScreen() {
           <Text variant="headline" tone="secondary">
             {q.title}
           </Text>
+          {q.content_untranslated && <UntranslatedNotice />}
         </View>
         {current && (
           <Animated.View key={current.id} entering={t.reduceMotion ? undefined : dir === 1 ? SlideInRight.springify().damping(20) : SlideInLeft.springify().damping(20)} exiting={t.reduceMotion ? undefined : dir === 1 ? SlideOutLeft.duration(160) : SlideOutRight.duration(160)}>

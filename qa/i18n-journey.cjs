@@ -75,6 +75,8 @@ const quizLessonId = catalog.lessons.find((l) => l.title === 'Check your underst
     await go('/settings');
     await clickTop(page.getByText(rowLabel, { exact: true }));
     await page.waitForTimeout(600);
+    const sheet = await page.evaluate(() => document.body.innerText);
+    check(`picker (${rowLabel}): Russian marked as interface-only`, /Interface only for now|Hozircha faqat interfeys|Пока только интерфейс/.test(sheet));
     await clickTop(page.getByText(nativeName, { exact: true }));
     await page.waitForTimeout(900);
   };
@@ -117,6 +119,17 @@ const quizLessonId = catalog.lessons.find((l) => l.title === 'Check your underst
   const ruProgress = await progressText();
   check('ru: progress unchanged after switching', ruProgress === uzProgress, `${ruProgress}% vs ${uzProgress}%`);
   await shot('ru-course');
+  const bodyText = async () => page.evaluate(() => document.body.innerText);
+  await go('/');
+  check('ru: Home explains lessons are not in Russian yet', await visibleText('Уроки на русском готовятся'));
+  check('ru: course cards name the lesson language', (await bodyText()).includes('Уроки: English'));
+  await clickTop(page.locator('[data-testid="ru-content-notice-dismiss"]'));
+  await page.waitForTimeout(600);
+  check('ru: Home notice can be dismissed', !(await visibleText('Уроки на русском готовятся')));
+  await go(`/lesson/${quizLessonId}`);
+  await clickTop(page.locator('[data-testid="start-quiz"]'));
+  await page.waitForTimeout(1200);
+  check('ru: quiz shows the not-translated notice', await visibleText('Перевод готовится'));
   await go(`/lesson/${lessonId}`);
   check('ru: lesson notice + original text', (await visibleText('Перевод готовится')) && (await visibleText('A machine that follows instructions')));
   await shot('ru-lesson');
@@ -126,6 +139,7 @@ const quizLessonId = catalog.lessons.find((l) => l.title === 'Check your underst
   await go('/course/computer-fundamentals-from-zero');
   check('en: course title in English', await visibleText('Computer Fundamentals from Zero'));
   check('en: no fallback notice', !(await visibleText('Translation is being prepared')) && !(await onTop('untranslated-notice')));
+  check('en: no lesson-language badges on English courses', !(await page.evaluate(() => document.body.innerText)).includes('Lessons: English'));
   check('en: progress unchanged', (await progressText()) === uzProgress);
   await shot('en-course');
 

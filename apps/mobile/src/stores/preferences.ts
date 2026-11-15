@@ -24,6 +24,8 @@ export interface PreferencesState {
   autoplayNext: boolean;
   captionsEnabled: boolean;
   reduceMotion: boolean;
+  /** Russian UI: the “lessons are not in Russian yet” notice on Home was acknowledged. */
+  ruContentNoticeDismissed: boolean;
   hapticsEnabled: boolean;
   downloadsWifiOnly: boolean;
   set: (patch: Partial<Omit<PreferencesState, 'set' | 'reset' | 'hasHydrated'>>) => void;
@@ -45,6 +47,7 @@ const defaults = {
   autoplayNext: true,
   captionsEnabled: false,
   reduceMotion: false,
+  ruContentNoticeDismissed: false,
   hapticsEnabled: true,
   downloadsWifiOnly: true,
 };

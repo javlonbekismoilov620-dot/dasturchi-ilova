@@ -474,6 +474,11 @@ const uz: Dictionary = {
     accountsDisabled: 'Hisoblar uchun server ulangan boʻlishi kerak. Demo rejimda hammasini koʻrib chiqishingiz mumkin.',
   },
   content: {
+    lessonsIn: 'Darslar: {language}',
+    ruNoticeTitle: 'Rus tilidagi darslar tayyorlanmoqda',
+    ruNoticeBody: 'Interfeys toʻliq rus tilida. Darslar hozircha ingliz va oʻzbek tillarida mavjud, har bir kursda uning qaysi tilda ekani koʻrsatilgan.',
+    gotIt: 'Tushunarli',
+    interfaceOnly: 'Hozircha faqat interfeys — darslar ingliz yoki oʻzbek tilida',
     untranslatedTitle: 'Hali tarjima qilinmagan',
     untranslatedBody: 'Tarjimasi tayyorlanmoqda. Hozircha asl matn {language} koʻrsatilmoqda.',
     inLanguage: { en: 'ingliz tilida', uz: 'oʻzbek tilida', ru: 'rus tilida' },

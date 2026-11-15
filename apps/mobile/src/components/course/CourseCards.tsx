@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { ArrowRight, Crown, Hammer, Layers, Play } from 'lucide-react-native';
+import { ArrowRight, Crown, Hammer, Languages, Layers, Play } from 'lucide-react-native';
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -11,13 +11,16 @@ import { Badge, ProgressBar } from '@/components/ui/primitives';
 import { Text } from '@/components/ui/Text';
 import type { RecentLesson } from '@/data/api';
 import type { Category, Course, DifficultyLevel, Enrollment, LearningPath } from '@/data/types';
-import { useI18n } from '@/i18n';
+import { LOCALES, useI18n } from '@/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { withAlpha } from '@/theme/tokens';
 
 const LEVEL_STEPS: DifficultyLevel[] = ['zero', 'beginner', 'intermediate', 'advanced', 'professional', 'expert'];
 
 /** Six-step ladder visual: ZERO → EXPERT. */
+/** Native name of a content language, e.g. “English”, shown on cards whose lessons are not in the UI language. */
+const languageName = (code: string) => LOCALES.find((l) => l.code === code)?.nativeName ?? code.toUpperCase();
+
 export function LevelMeter({ level, color }: { level: DifficultyLevel; color?: string }) {
   const t = useTheme();
   const { t: tr } = useI18n();
@@ -54,6 +57,7 @@ export const CourseCard = memo(function CourseCard({ course, enrollment, width =
               <Badge label={tr('common.free')} tone="cover" />
             )}
             {!course.content_complete && <Badge label={tr('course.inDevelopment')} icon={Hammer} tone="cover" />}
+            {course.content_untranslated && <Badge label={tr('content.lessonsIn', { language: languageName(course.language) })} icon={Languages} tone="cover" />}
           </View>
           <View style={[styles.coverIcon, { backgroundColor: withAlpha('#000000', 0.28), borderColor: withAlpha('#FFFFFF', 0.14) }]}>
             <DynamicIcon name={course.category?.icon} size={16} color="#FFFFFF" />
@@ -121,6 +125,14 @@ export const CourseRow = memo(function CourseRow({ course, enrollment, index = 0
             </Text>
             {course.access_tier === 'premium' && <Crown size={13} color={t.colors.accent} />}
           </View>
+          {course.content_untranslated && (
+            <View style={styles.meta}>
+              <Languages size={12} color={t.colors.textSecondary} />
+              <Text variant="caption" tone="secondary">
+                {tr('content.lessonsIn', { language: languageName(course.language) })}
+              </Text>
+            </View>
+          )}
           {enrollment && <ProgressBar value={enrollment.progress_percent / 100} height={3} color={color} style={{ marginTop: 6 }} />}
         </View>
       </PressableScale>

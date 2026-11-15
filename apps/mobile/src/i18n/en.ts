@@ -471,6 +471,11 @@ const en = {
     accountsDisabled: 'Accounts need a connected backend. You can explore everything in demo mode.',
   },
   content: {
+    lessonsIn: 'Lessons: {language}',
+    ruNoticeTitle: 'Russian lessons are on the way',
+    ruNoticeBody: 'The interface is fully in Russian. Lesson content is currently available in English and Uzbek, and every course shows which language it is in.',
+    gotIt: 'Got it',
+    interfaceOnly: 'Interface only for now — lessons are in English or Uzbek',
     untranslatedTitle: 'Not translated yet',
     untranslatedBody: 'A translation is being prepared. Until then this is shown {language}.',
     inLanguage: { en: 'in English', uz: 'in Uzbek', ru: 'in Russian' },

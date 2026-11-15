@@ -168,6 +168,7 @@ export interface QuizQuestion {
 
 export interface Quiz {
   id: string;
+  content_untranslated?: boolean;
   course_id: string;
   lesson_id: string | null;
   title: string;

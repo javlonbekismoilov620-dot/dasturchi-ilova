@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Aurora } from '@/components/brand/Aurora';
 import { CategoryTile, ContinueCard, CourseCard, CourseRow, PathCard, RecentLessonCard } from '@/components/course/CourseCards';
-import { DemoBadge, DemoNotice, OfflineBanner } from '@/components/feedback/Banners';
+import { DemoBadge, DemoNotice, OfflineBanner, RussianContentNotice } from '@/components/feedback/Banners';
 import { TAB_BAR_HEIGHT } from '@/components/navigation/TabBar';
 import { Button } from '@/components/ui/Button';
 import { IconButton, ScrollScreen, SectionHeader } from '@/components/ui/layout';
@@ -188,6 +188,7 @@ export default function Home() {
       <View style={{ gap: 12 }}>
         <OfflineBanner />
         <DemoNotice />
+        <RussianContentNotice />
       </View>
 
       {signedIn ? (
