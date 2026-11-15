@@ -58,7 +58,7 @@ Each **module** ends with a knowledge check of 4–8 questions. Every question n
 
 The first priority is to **finish what learners can already see**, before opening new courses.
 
-**Sprint 1: complete the eight published entry courses**: 44 written lessons (including projects) plus 20 knowledge checks and assessments, listed exactly in [sprint-1.md](sprint-1.md). The per-course totals below were rough estimates; sprint-1.md is the authoritative list.
+**Sprint 1: complete the eight published entry courses**: written and verified on 15 November 2026: 30 → 99 lessons, with knowledge checks, projects and final assessments, in English and Oʻzbekcha. See [sprint-1.md](sprint-1.md) for the exact list and the verification results. No course is marked complete until its expert and native-Uzbek reviews are approved in Studio, and none of the seven new curricula is opened as an app course before that.
 
 | Course | Now | Target | Main additions |
 | --- | --- | --- | --- |
