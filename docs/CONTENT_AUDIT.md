@@ -44,7 +44,7 @@ Word counts exclude code. Uzbek is agglutinative, so a faithful Uzbek text is ty
 | 1 | *Python → Installing Python*: “go to the folder with the file” never explains how, which blocks absolute beginners | Medium | **Fixed** in English and Uzbek: introduces `cd` (*change directory*) with an example |
 | 2 | Interface grammar: “15 daqiqadan 0”, “Oʻtish bali”, “Bir oz”, “Ishonchim komil” (means “I am certain”), and suffixes hanging off times and dates (“{time} da”) | Low | **Fixed** (`apps/mobile/src/i18n/uz.ts`) |
 | 3 | Topics named after products (HTML, Python, Figma…) had no Uzbek entry, so the app would have treated them as untranslated | Low | **Fixed**: recorded explicitly as identical names in Uzbek and Russian |
-| 4 | Uzbek suffixes attached to English product names with an apostrophe (“Unreal Engine’ni”) | Low | **Fixed**: rephrased (“Unreal Engine dvigatelini”), in line with the rule that suffixes are not split off with apostrophes |
+| 4 | Inconsistent handling of suffixes after English product names | Low | **Fixed (revised 15 Nov):** the style guide now follows Uzbek media practice — ’ (U+2019) after foreign names in original spelling (“Unreal Engine’ni”); the interim rephrasing (“Unreal Engine dvigatelini”) was redundant and was replaced. The audit enforces ’ vs ʼ |
 | 5 | **Unreal Engine Fundamentals** is published with 1 of 3 lessons and no assessment (lessons 2–3 are *in review* / *draft*) | **High** | **Open — decision needed.** Recommended: finish lessons 2–3 and a module quiz in the next content sprint (they are specified in [curriculum/unreal-engine.md](curriculum/unreal-engine.md)). Until then it is labelled *In development*. If you prefer, unpublish it in Studio; learner progress is kept either way |
 | 6 | All courses are short introductions (161–888 words) | Expected | Accurate *In development* labels; addressed by the curriculum plan |
 | 7 | No videos and no downloadable resources exist yet | Expected | Content production task; the player and downloads are ready |
@@ -84,9 +84,9 @@ Short-answer questions (`mp4`, `body`) are language-neutral. As a safeguard, gra
 | element / tag / attribute | element / teg / atribut |
 | heading / paragraph / list | sarlavha / xatboshi / roʻyxat |
 | variable / value / string / integer | oʻzgaruvchi / qiymat / satr / butun son |
-| comment / bug / debugging | izoh / bag (xato) / debaging |
+| comment / bug / debugging | izoh / xato (*bug*) / xatolarni tuzatish (*debugging*) |
 | vertex / edge / face | uch / qirra / yoq |
-| timeline / track / cut / frame rate | vaqt shkalasi / trek / kesish / kadrlar chastotasi |
+| shot / cut / frame / frame rate | lavha / kesish / kadr / kadrlar chastotasi |
 | aspect ratio / resolution | tomonlar nisbati / ruxsat |
 | hierarchy / alignment / proximity | ierarxiya / tekislash / yaqinlik |
 | machine learning / hallucination | mashinali oʻqitish / gallyutsinatsiya |
@@ -118,6 +118,6 @@ They were **identical**.
 
 ## Recommended before launch
 
-1. **Native-speaker review:** have a native Uzbek editor with subject knowledge read the Uzbek lessons, especially terminology choices such as *debaging* and *ona plata*. The automated checks catch orthography and structure, not style.
+1. **Native-speaker review:** a second editorial pass (15 Nov) fixed terminology (*lavha* vs *kadr*, *modul*, *debugging*) and consistency; see [docs/i18n/uz-style-guide.md](i18n/uz-style-guide.md). A native Uzbek editor should now review with the generated pack (`docs/review/uz-review-pack.html`) and sign off per course in Studio.
 2. Decide on **Unreal Engine Fundamentals** (finding 5).
 3. Translate course content into Russian with the same process. The audit test can be extended to `ru` by changing one constant.

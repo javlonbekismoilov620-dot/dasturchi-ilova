@@ -58,7 +58,7 @@ Each **module** ends with a knowledge check of 4–8 questions. Every question n
 
 The first priority is to **finish what learners can already see**, before opening new courses.
 
-**Sprint 1: complete the eight published entry courses** (about 45 new lessons in total; detailed in each subject file).
+**Sprint 1: complete the eight published entry courses**: 44 written lessons (including projects) plus 20 knowledge checks and assessments, listed exactly in [sprint-1.md](sprint-1.md). The per-course totals below were rough estimates; sprint-1.md is the authoritative list.
 
 | Course | Now | Target | Main additions |
 | --- | --- | --- | --- |
