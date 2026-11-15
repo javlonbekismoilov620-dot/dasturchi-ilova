@@ -35,6 +35,7 @@ export async function loadLibrary() {
     achievements: await all('achievements'),
     plans: await all('subscription_plans'),
     instructors: (await all('instructors')).filter((i) => courses.some((c) => c.instructor_id === i.id)),
+    reviews: (await all('content_reviews')).filter((r) => courseIds.has(r.course_id)),
   };
 }
 
@@ -81,6 +82,12 @@ export function orthographyIssues(md) {
   add(/[^oOgG\s]ʻ/g, 'ʻ (U+02BB) is only for oʻ/gʻ — use ʼ (U+02BC) for the tutuq belgisi');
   add(/\p{L}'\p{L}/gu, 'ASCII apostrophe inside a word');
   add(/[Ѐ-ӿ]/g, 'Cyrillic letter in Uzbek Latin text');
+  // ’ (U+2019) only separates an Uzbek suffix from a foreign name in its original spelling
+  // (Unreal’da, Launcher’ni) — never inside an Uzbek word, where the tutuq belgisi ʼ belongs.
+  for (const m of text.matchAll(/’(?=\p{Ll})/gu)) {
+    const before = text.slice(0, m.index).match(/[\p{L}\d.+#-]+$/u)?.[0] ?? '';
+    if (!/[\p{Lu}\d]/u.test(before)) issues.push(`’ inside an Uzbek word — use ʼ (U+02BC) for the tutuq belgisi: “…${text.slice(Math.max(0, m.index - 12), m.index + 14).replace(/\s+/g, ' ')}…”`);
+  }
   for (const [wrong, right] of NEEDS_TUTUQ) {
     add(new RegExp(`(?<![\\p{L}ʻʼ])${wrong}`, 'giu'), `“${wrong}” should be “${right}”`);
   }
@@ -90,4 +97,31 @@ export function orthographyIssues(md) {
 export function tr(row, field) {
   const v = row?.translations?.[LOCALE]?.[field];
   return typeof v === 'string' ? v.trim() : v;
+}
+
+/**
+ * The measurable part of the course “definition of done” (docs/curriculum/README.md).
+ * Expert and native-speaker review are recorded in content_reviews.
+ */
+export function courseReadiness(lib, course) {
+  const pub = (r) => r.status === 'published';
+  const modules = lib.modules.filter((m) => m.course_id === course.id && pub(m));
+  const lessons = lib.lessons.filter((l) => l.course_id === course.id);
+  const quizzes = lib.quizzes.filter((q) => q.course_id === course.id && pub(q));
+  const inModule = (m) => lessons.filter((l) => l.module_id === m.id);
+  const gaps = modules.flatMap((m) => inModule(m).filter((l) => !pub(l)).map((l) => l.title));
+  const finalQuiz = quizzes.find((q) => q.kind === 'final_assessment');
+  const teaching = modules.filter((m) => inModule(m).some((l) => pub(l) && ['article', 'exercise', 'video'].includes(l.type)));
+  const unchecked = teaching.filter((m) => !inModule(m).some((l) => pub(l) && quizzes.some((q) => q.lesson_id === l.id))).map((m) => m.title);
+  const project = lessons.find((l) => pub(l) && l.type === 'project' && lib.assignments.some((a) => a.lesson_id === l.id && pub(a) && a.rubric_md));
+  const review = (kind) => lib.reviews.find((r) => r.course_id === course.id && r.kind === kind)?.status ?? 'pending';
+  const checks = {
+    'no unpublished lessons inside published modules': gaps.length === 0,
+    'every teaching module has a knowledge check': unchecked.length === 0,
+    'final project with rubric': !!project,
+    'final assessment': !!finalQuiz,
+    'expert review approved': review('expert') === 'approved',
+    'native Uzbek review approved': review('native_uz') === 'approved',
+  };
+  return { checks, gaps, unchecked, ready: Object.values(checks).every(Boolean), published: lessons.filter(pub).length };
 }

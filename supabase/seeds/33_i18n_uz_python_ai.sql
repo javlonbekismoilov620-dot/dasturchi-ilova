@@ -44,7 +44,7 @@ Bu birgina qator kompyuterga `Salom, dunyo!` matnini ekranga chiqarishni buyurad
 3. **Takrorlash** — biror ishni koʻp marta yozmasdan, koʻp marta bajarish.
 
 > [!TIP]
-> Koddagi xatolar **bag** (inglizcha *bug*), ularni tuzatish esa **debaging** (*debugging*) deyiladi. Har bir dasturchi — jumladan, tajribali mutaxassislar ham — har kuni xato qiladi. Xato haqidagi xabarlar muvaffaqiyatsizlik emas, balki yoʻl koʻrsatuvchi ishoralardir.$md$);
+> Koddagi xatolar inglizcha **bug** (“qoʻngʻiz”), ularni topib tuzatish esa **debugging** (xatolarni tuzatish) deb ataladi. Har bir dasturchi — jumladan, tajribali mutaxassislar ham — har kuni xato qiladi. Xato haqidagi xabarlar muvaffaqiyatsizlik emas, balki yoʻl koʻrsatuvchi ishoralardir.$md$);
 
   perform seed.tr_lesson(c, 'Installing Python and running your first program', 'uz', 'Pythonni oʻrnatish va birinchi dasturni ishga tushirish',
     'Pythonni oʻrnating, terminalni oching va kodni ikki xil usulda ishga tushiring.',
@@ -148,7 +148,7 @@ print(type(42))       # <class 'int'>
 - Harflar, raqamlar va pastki chiziqdan foydalaning: `total_price`, `player2`.
 - Nom raqam bilan boshlanmasin: `2player` — notoʻgʻri nom.
 - Nomlar katta-kichik harfga sezgir: `Age` va `age` — ikki xil oʻzgaruvchi.
-- Nomi oʻzini oʻzi tushuntiradigan boʻlsin: `minutes_per_day` nomi `m` dan yaxshiroq. Oʻzgaruvchilarni lotin harflarida, odatda inglizcha nomlash qabul qilingan.
+- Nomi oʻzini oʻzi tushuntiradigan boʻlsin: `minutes_per_day` nomi `m` dan yaxshiroq. Dasturchilar orasida oʻzgaruvchilarga lotin harflarida, odatda inglizcha nom berish qabul qilingan.
 
 ## Mashq
 
@@ -163,7 +163,7 @@ print(apples * price)
 
 Keyin uni ishga tushiring. `15.0` deb taxmin qildingizmi? `int` ni `float` ga koʻpaytirsangiz, natija `float` boʻladi.$md$);
 
-  perform seed.tr_quiz(c, 'Knowledge check: variables', 'uz', 'Bilim tekshiruvi: oʻzgaruvchilar');
+  perform seed.tr_quiz(c, 'Knowledge check: variables', 'uz', 'Bilimni tekshirish: oʻzgaruvchilar');
   perform seed.tr_question(c, 'Knowledge check: variables', 0, 'uz',
     'Bu dastur nimani chiqaradi?',
     '`x` 4 dan boshlanadi, soʻngra 4 + 3 = 7 ga aylanadi.',
@@ -268,7 +268,7 @@ Quyidagi zaif promptni beshta qismning hammasidan foydalanib qayta yozing, soʻn
 > [!NOTE]
 > Vosita maʼlumotlarni qanday saqlashi va ishlatishini aniq bilmasangiz, unga hech qachon parollar, maxfiy hujjatlar yoki boshqa odamlarning shaxsiy maʼlumotlarini kiritmang.$md$);
 
-  perform seed.tr_quiz(c, 'Knowledge check: prompting', 'uz', 'Bilim tekshiruvi: promptlar');
+  perform seed.tr_quiz(c, 'Knowledge check: prompting', 'uz', 'Bilimni tekshirish: promptlar');
   perform seed.tr_question(c, 'Knowledge check: prompting', 0, 'uz',
     'Yordamchi oʻylab topilgan statistikani keltirib, ishonch bilan javob beradi. Bu hodisa nima deb ataladi?',
     'Gallyutsinatsiya — ravon va ishonarli, ammo haqiqatga toʻgʻri kelmaydigan javob.',

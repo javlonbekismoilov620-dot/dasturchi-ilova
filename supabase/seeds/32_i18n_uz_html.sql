@@ -10,13 +10,13 @@ begin
 Sizda allaqachon bor boʻlgan matn muharriri va brauzerdan boshqa hech narsa oʻrnatish shart emas. Har bir dars avval *nima uchun*ni, keyin *qanday qilib*ni tushuntiradi — shu tufayli kodni koʻchirib olmaysiz, balki tushunasiz.$d$,
     array['Manzilni yozganingizdan sahifani koʻrguningizgacha nima sodir boʻlishini tushuntira olasiz',
           'Toʻgʻri HTML hujjatni yoddan yoza olasiz',
-          'Kontentni sarlavhalar, xatboshilar va roʻyxatlar yordamida tuzilmalaysiz',
+          'Kontentni sarlavhalar, xatboshilar va roʻyxatlar yordamida tuzilmaga solasiz',
           'Kodni nashrga tayyor yozish odatlari: chekinishlar, semantik teglar va izohlar'],
     array['Kompyuterdan oddiy foydalana olish: fayl yaratish va uni ochish']);
 
   perform seed.tr_module(c, 'How the web works', 'uz', 'Internet qanday ishlaydi',
     'Brauzer nima qiladi va HTML bu jarayonda qayerda turadi.');
-  perform seed.tr_module(c, 'Structuring content', 'uz', 'Kontentni tuzilmalash',
+  perform seed.tr_module(c, 'Structuring content', 'uz', 'Kontentni tuzilmaga solish',
     'Sarlavhalar, xatboshilar, roʻyxatlar va birinchi loyihangiz.');
   perform seed.tr_module(c, 'Links, images and media', 'uz', 'Havolalar, tasvirlar va media',
     'Sahifalarni bir-biri bilan bogʻlang va rasmlar qoʻshing.');
@@ -138,7 +138,7 @@ Har bir HTML hujjat bir xil asosiy tuzilmaga ega. Har bir qatorni va uning izohi
 
 Har bir qator nima qilishini tushuntira olsangiz, quyidagi bilim tekshiruvini topshiring.$md$);
 
-  perform seed.tr_quiz(c, 'Knowledge check: HTML basics', 'uz', 'Bilim tekshiruvi: HTML asoslari');
+  perform seed.tr_quiz(c, 'Knowledge check: HTML basics', 'uz', 'Bilimni tekshirish: HTML asoslari');
   perform seed.tr_question(c, 'Knowledge check: HTML basics', 0, 'uz',
     'Hujjatning qaysi qismi brauzer yorligʻida koʻrinadigan matnni saqlaydi?',
     '`<title>` elementi `<head>` ichida joylashadi va yorliq matnini belgilaydi.',

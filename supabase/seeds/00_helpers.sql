@@ -152,3 +152,144 @@ begin
   execute format('select id from public.%I where slug = $1', p_table) into v using p_slug;
   perform seed.tr(p_table, v, p_locale, p_fields, p_table || ' / ' || p_slug);
 end $$;
+
+-- ---------------------------------------------------------------------------------------
+-- Idempotent authoring helpers for content added after the first release (Sprint 1+).
+-- They find rows by course slug + base-language title, UPDATE them when they exist and
+-- INSERT only when missing — never delete — so re-running a content file on a live
+-- database keeps every ID, enrolment, progress record and quiz attempt.
+create or replace function seed.ensure_module(p_course text, p_title text, p_description text,
+  p_status public.content_status default 'published') returns uuid language plpgsql as $$
+declare v uuid; c uuid := seed.course(p_course);
+begin
+  if c is null then raise exception 'seed.ensure_module: course % not found', p_course; end if;
+  select id into v from public.modules where course_id = c and title = p_title;
+  if v is null then
+    insert into public.modules (course_id, title, description, position, status)
+    values (c, p_title, p_description, (select coalesce(max(position) + 1, 0) from public.modules where course_id = c), p_status)
+    returning id into v;
+  else
+    update public.modules set description = p_description, status = p_status where id = v;
+  end if;
+  return v;
+end $$;
+
+-- Puts modules / lessons in the given order (by base title). Rows not listed keep their
+-- relative order after the listed ones.
+create or replace function seed.order_modules(p_course text, p_titles text[]) returns void language plpgsql as $$
+declare c uuid := seed.course(p_course); i int;
+begin
+  for i in 1 .. cardinality(p_titles) loop
+    if not exists (select 1 from public.modules where course_id = c and title = p_titles[i]) then
+      raise exception 'seed.order_modules: % has no module %', p_course, p_titles[i];
+    end if;
+    update public.modules set position = i - 1 where course_id = c and title = p_titles[i];
+  end loop;
+end $$;
+
+create or replace function seed.order_lessons(p_course text, p_module text, p_titles text[]) returns void language plpgsql as $$
+declare m uuid := (select id from public.modules where course_id = seed.course(p_course) and title = p_module); i int;
+begin
+  if m is null then raise exception 'seed.order_lessons: % has no module %', p_course, p_module; end if;
+  for i in 1 .. cardinality(p_titles) loop
+    if not exists (select 1 from public.lessons where course_id = seed.course(p_course) and title = p_titles[i]) then
+      raise exception 'seed.order_lessons: % has no lesson %', p_course, p_titles[i];
+    end if;
+    update public.lessons set module_id = m, position = i - 1 where course_id = seed.course(p_course) and title = p_titles[i];
+  end loop;
+end $$;
+
+create or replace function seed.ensure_lesson(p_course text, p_module text, p_title text, p_type public.lesson_type,
+  p_minutes int, p_summary text, p_body text, p_status public.content_status default 'published',
+  p_preview boolean default false, p_xp int default 10) returns uuid language plpgsql as $$
+declare
+  c uuid := seed.course(p_course);
+  m uuid := (select id from public.modules where course_id = seed.course(p_course) and title = p_module);
+  v uuid;
+begin
+  if m is null then raise exception 'seed.ensure_lesson: % has no module %', p_course, p_module; end if;
+  select id into v from public.lessons where course_id = c and title = p_title;
+  if v is null then
+    insert into public.lessons (module_id, course_id, title, summary, type, position, duration_seconds, is_preview, xp, status)
+    values (m, c, p_title, p_summary, p_type, (select coalesce(max(position) + 1, 0) from public.lessons where module_id = m),
+            p_minutes * 60, p_preview, p_xp, p_status)
+    returning id into v;
+  else
+    update public.lessons set summary = p_summary, type = p_type, duration_seconds = p_minutes * 60,
+      is_preview = p_preview, xp = p_xp, status = p_status where id = v;
+  end if;
+  if p_body is not null then
+    insert into public.lesson_contents (lesson_id, body_md) values (v, p_body)
+    on conflict (lesson_id) do update set body_md = excluded.body_md, updated_at = now();
+  end if;
+  return v;
+end $$;
+
+create or replace function seed.ensure_quiz(p_course text, p_lesson text, p_title text,
+  p_kind public.quiz_kind default 'knowledge_check', p_pass int default 70, p_xp int default 20) returns uuid
+language plpgsql as $$
+declare
+  l public.lessons := (select l from public.lessons l where course_id = seed.course(p_course) and title = p_lesson);
+  v uuid;
+begin
+  if l.id is null then raise exception 'seed.ensure_quiz: % has no lesson %', p_course, p_lesson; end if;
+  select id into v from public.quizzes where course_id = l.course_id and title = p_title;
+  if v is null then
+    insert into public.quizzes (course_id, module_id, lesson_id, title, kind, pass_score_percent, xp, status)
+    values (l.course_id, l.module_id, l.id, p_title, p_kind, p_pass, p_xp, 'published') returning id into v;
+  else
+    update public.quizzes set module_id = l.module_id, lesson_id = l.id, kind = p_kind, pass_score_percent = p_pass, xp = p_xp, status = 'published' where id = v;
+  end if;
+  return v;
+end $$;
+
+-- A question with its options. Existing questions (same quiz + position) keep their IDs and
+-- their answers' IDs; texts are updated. Options are given in order with their correctness.
+create or replace function seed.ensure_question(p_quiz uuid, p_position int, p_type public.question_type,
+  p_prompt text, p_explanation text, p_labels text[], p_correct boolean[], p_feedback text[] default null,
+  p_code text default null) returns uuid language plpgsql as $$
+declare v uuid; n int; a record; i int := 0;
+begin
+  if cardinality(p_labels) <> cardinality(p_correct) then raise exception 'labels/correct length mismatch'; end if;
+  select id into v from public.questions where quiz_id = p_quiz and position = p_position;
+  if v is null then
+    insert into public.questions (quiz_id, position, type, prompt_md, explanation_md, code_snippet)
+    values (p_quiz, p_position, p_type, p_prompt, p_explanation, p_code) returning id into v;
+  else
+    update public.questions set type = p_type, prompt_md = p_prompt, explanation_md = p_explanation, code_snippet = p_code where id = v;
+  end if;
+  select count(*) into n from public.answers where question_id = v;
+  if n = 0 then
+    for i in 1 .. cardinality(p_labels) loop
+      insert into public.answers (question_id, position, label_md, is_correct, feedback_md)
+      values (v, i - 1, p_labels[i], p_correct[i], p_feedback[i]);
+    end loop;
+  elsif n = cardinality(p_labels) then
+    for a in select id from public.answers where question_id = v order by position, id loop
+      i := i + 1;
+      update public.answers set label_md = p_labels[i], is_correct = p_correct[i], feedback_md = p_feedback[i], position = i - 1 where id = a.id;
+    end loop;
+  else
+    raise exception 'seed.ensure_question: quiz % Q% has % answers, % given', p_quiz, p_position, n, cardinality(p_labels);
+  end if;
+  return v;
+end $$;
+
+create or replace function seed.ensure_assignment(p_course text, p_lesson text, p_title text, p_brief text, p_rubric text,
+  p_submission public.submission_type default 'any', p_project boolean default true, p_max int default 100) returns uuid
+language plpgsql as $$
+declare
+  l public.lessons := (select l from public.lessons l where course_id = seed.course(p_course) and title = p_lesson);
+  v uuid;
+begin
+  if l.id is null then raise exception 'seed.ensure_assignment: % has no lesson %', p_course, p_lesson; end if;
+  select id into v from public.assignments where course_id = l.course_id and title = p_title;
+  if v is null then
+    insert into public.assignments (course_id, module_id, lesson_id, title, brief_md, rubric_md, submission_type, is_project, max_score, status)
+    values (l.course_id, l.module_id, l.id, p_title, p_brief, p_rubric, p_submission, p_project, p_max, 'published') returning id into v;
+  else
+    update public.assignments set module_id = l.module_id, lesson_id = l.id, brief_md = p_brief, rubric_md = p_rubric,
+      submission_type = p_submission, is_project = p_project, max_score = p_max, status = 'published' where id = v;
+  end if;
+  return v;
+end $$;

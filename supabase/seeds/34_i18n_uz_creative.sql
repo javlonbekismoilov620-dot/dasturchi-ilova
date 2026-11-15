@@ -219,7 +219,7 @@ begin
     'Har bir montajchi foydalanadigan gʻoyalar.');
 
   perform seed.tr_lesson(c, 'What video editing really is', 'uz', 'Video montaj aslida nima',
-    'Hikoya aytish uchun kadrlarni tanlash, tartiblash va vaqtini belgilash.',
+    'Hikoya aytish uchun lavhalarni tanlash, tartiblash va vaqtini belgilash.',
 $md$## Montaj — bu hikoyachilik
 
 **Video montaj** — yozib olingan materialdan eng yaxshi lahzalarni tanlab, ularni hikoya aytadigan yoki xabar yetkazadigan tarzda tartiblash va davomiyligini belgilash. Montajchi tomoshabin nimani, qancha vaqt va qanday ketma-ketlikda koʻrishini hal qiladi.
@@ -230,8 +230,8 @@ Tayyor ikki daqiqalik video bir soatlik materialdan yigʻilgan boʻlishi mumkin.
 
 - **Footage** (xom material) — yozib olingan, ishlov berilmagan video.
 - **Klip** — loyihangizga joylashtirilgan bitta material boʻlagi.
-- **Kadr** (*shot*, plan) — bitta kamera rakursidan uzluksiz yozib olingan lavha.
-- **Kesish** (*cut*) — bir kadr tugab, keyingisi boshlanadigan nuqta.
+- **Lavha** (*shot*, plan) — bitta kamera rakursidan uzluksiz yozib olingan qism.
+- **Kesish** (*cut*) — bir lavha tugab, keyingisi boshlanadigan nuqta.
 - **Ketma-ketlik** (*sequence*) — tartib bilan joylashtirilgan kliplar toʻplami.
 
 ## Kesishlar nega ishlaydi
@@ -265,16 +265,16 @@ Har bir montaj dasturida **vaqt shkalasi** (*timeline*) bor: vaqt chapdan oʻngg
 
 ## Kesish turlari
 
-- **Toʻgʻridan-toʻgʻri kesish** (*hard cut*) — bir kadrdan keyingisiga toʻgʻridan-toʻgʻri oʻtish. Eng koʻp ishlatiladigan montaj usuli.
-- **Jump cut** (sakrash) — bitta kadr ichida vaqtni tashlab oʻtuvchi kesish; vloglarda mashhur.
-- **J-cut** — keyingi kadrning *ovozi* uning tasviridan oldin boshlanadi.
-- **L-cut** — joriy kadrning ovozi keyingi kadr tasviri ustida davom etadi.
-- **Cutaway** (chetga burilish) — asosiy kadrga qaytishdan oldin qisqa vaqt boshqa narsani (detal, reaksiya) koʻrsatish.
+- **Toʻgʻridan-toʻgʻri kesish** (*hard cut*) — bir lavhadan keyingisiga toʻgʻridan-toʻgʻri oʻtish. Eng koʻp ishlatiladigan montaj usuli.
+- **Jump cut** (sakrash) — bitta lavha ichida vaqtni tashlab oʻtuvchi kesish; vloglarda mashhur.
+- **J-cut** — keyingi lavhaning *ovozi* uning tasviridan oldin boshlanadi.
+- **L-cut** — joriy lavhaning ovozi keyingi lavha tasviri ustida davom etadi.
+- **Cutaway** (chetga burilish) — asosiy lavhaga qaytishdan oldin qisqa vaqt boshqa narsani (detal, reaksiya) koʻrsatish.
 
 ## Professional ish jarayoni
 
 1. **Tartiblash** — materialni import qiling va papkalarga (*bins*) nomlab joylang.
-2. **Yigʻish** (*assembly*) — yaroqli kadrlarni taxminiy tartibda joylashtiring.
+2. **Yigʻish** (*assembly*) — yaroqli lavhalarni taxminiy tartibda joylashtiring.
 3. **Qoralama montaj** (*rough cut*) — hikoyani shakllantiring, tuzilmani toʻgʻri yoʻlga qoʻying.
 4. **Yakuniy montaj** (*fine cut*) — har bir kesishning vaqtini mukammallashtiring.
 5. **Rang va ovoz** — rang korreksiyasi, rang tusini berish va ovozni aralashtirish.
@@ -284,10 +284,10 @@ Har bir montaj dasturida **vaqt shkalasi** (*timeline*) bor: vaqt chapdan oʻngg
     'Montaj atamalari va sozlamalari.', null);
   perform seed.tr_quiz(c, 'Editing fundamentals quiz', 'uz', 'Montaj asoslari testi');
   perform seed.tr_question(c, 'Editing fundamentals quiz', 0, 'uz',
-    'Keyingi kadrning ovozi uning tasviri paydo boʻlishidan **oldin** boshlanadi. Bu nima?',
+    'Keyingi lavhaning ovozi uning tasviri paydo boʻlishidan **oldin** boshlanadi. Bu nima?',
     'J-cut: vaqt shkalasida audio va video J harfi shaklini hosil qiladi.',
     array['L-cut', 'J-cut', 'Jump cut'],
-    array['L-cut usulida *joriy* kadrning ovozi keyingi tasvir ustida davom etadi.', null, 'Jump cut bitta kadr ichida vaqtni tashlab oʻtadi.']);
+    array['L-cut usulida *joriy* lavhaning ovozi keyingi tasvir ustida davom etadi.', null, 'Jump cut bitta lavha ichida vaqtni tashlab oʻtadi.']);
   perform seed.tr_question(c, 'Editing fundamentals quiz', 1, 'uz',
     'Telefondagi vertikal videolar uchun qaysi tomonlar nisbati standart hisoblanadi?',
     '9:16 — vertikal; 16:9 — gorizontal.',
@@ -303,10 +303,10 @@ declare
   c constant text := 'unreal-engine-fundamentals';
 begin
   perform seed.tr_course(c, 'uz', 'Unreal Engine asoslari',
-    'Oʻyin dvigatellarini tushuning va Unreal Editor muharririda yoʻlingizni toping',
-    $d$Unreal Engine — oʻyinlar, filmlar, arxitektura va simulyatsiyalar uchun ishlatiladigan professional real vaqt 3D dvigateli. Bu kurs oʻyin dvigateli nima ekanini, Unreal Engine dvigatelini qanday xavfsiz oʻrnatishni va muharrir qanday tuzilganini tushuntiradi — bu keyingi barcha Unreal kurslari uchun poydevor.$d$,
+    'Oʻyin dvigatellarini tushuning va Unreal Editor’da yoʻlingizni toping',
+    $d$Unreal Engine — oʻyinlar, filmlar, arxitektura va simulyatsiyalar uchun ishlatiladigan professional real vaqt 3D dvigateli. Bu kurs oʻyin dvigateli nima ekanini, Unreal Engine’ni qanday xavfsiz oʻrnatishni va muharrir qanday tuzilganini tushuntiradi — bu keyingi barcha Unreal kurslari uchun poydevor.$d$,
     array['Oʻyin dvigateli nimalarni taqdim etishini tushuntira olasiz',
-          'Unreal Engine dvigatelini Epic Games Launcher orqali oʻrnata olasiz',
+          'Unreal Engine’ni Epic Games Launcher orqali oʻrnata olasiz',
           'Muharrirda harakatlanasiz: Viewport, Outliner, Details va Content Drawer'],
     array['“Kompyuter asoslari: noldan boshlab” kursi', 'Yetarlicha quvvatli kompyuter (2-darsga qarang)']);
 
@@ -330,12 +330,12 @@ Har bir oʻyin tasvirlarni chizishi, tovushlarni ijro etishi, boshqaruv qurilmas
 
 ## Aynan Unreal Engine haqida
 
-Unreal Engine dvigatelini Epic Games kompaniyasi ishlab chiqadi. 5-versiyada **Nanite** (juda batafsil geometriya) va **Lumen** (dinamik global yoritish) kabi tizimlar paydo boʻldi. Xatti-harakatlarni tugunlarga asoslangan vizual tizim — **Blueprints** yordamida qurish yoki **C++** tilida yozish mumkin.
+Unreal Engine’ni Epic Games kompaniyasi ishlab chiqadi. 5-versiyada **Nanite** (juda batafsil geometriya) va **Lumen** (dinamik global yoritish) kabi tizimlar paydo boʻldi. Xatti-harakatlarni tugunlarga asoslangan vizual tizim — **Blueprints** yordamida qurish yoki **C++** tilida yozish mumkin.
 
 > [!NOTE]
-> Unreal Engine dvigatelini yuklab olish va oʻrganish bepul. Tijoriy mahsulotlar esa Epic litsenziya shartlariga boʻysunadi — mahsulot chiqarishdan oldin har doim unrealengine.com saytidagi amaldagi EULA (litsenziya kelishuvi)ni oʻqing.$md$);
+> Unreal Engine’ni yuklab olish va oʻrganish bepul. Tijoriy mahsulotlar esa Epic litsenziya shartlariga boʻysunadi — mahsulot chiqarishdan oldin har doim unrealengine.com saytidagi amaldagi EULA (litsenziya kelishuvi)ni oʻqing.$md$);
 
-  perform seed.tr_lesson(c, 'Installing Unreal Engine', 'uz', 'Unreal Engine dvigatelini oʻrnatish',
+  perform seed.tr_lesson(c, 'Installing Unreal Engine', 'uz', 'Unreal Engine’ni oʻrnatish',
     'Tizim talablari, Epic Games Launcher va birinchi loyihangiz.', null);
   perform seed.tr_lesson(c, 'A tour of the editor', 'uz', 'Muharrir boʻylab sayohat',
     'Viewport, Outliner, Details paneli va Content Drawer.', null);

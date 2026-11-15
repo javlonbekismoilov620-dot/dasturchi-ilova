@@ -273,10 +273,7 @@ export function CourseEditor() {
                 </Select>
               </Field>
               <Switch label="Featured on Home" checked={form.is_featured} onChange={(v) => set('is_featured', v)} />
-              <Switch label="Curriculum complete" checked={form.content_complete} onChange={(v) => set('content_complete', v)} />
-              <p className="small faint" style={{ margin: 0 }}>
-                While off, learners see an “In development” notice. Turn on only when every planned lesson is published.
-              </p>
+              <CompletionReviews courseId={form.id} complete={form.content_complete} onComplete={(v) => set('content_complete', v)} />
               <Switch label="Issue certificates" checked={form.certificate_enabled} onChange={(v) => set('certificate_enabled', v)} />
             </div>
             <div className="row" style={{ position: 'sticky', bottom: 16 }}>
@@ -498,6 +495,70 @@ function CourseTranslations({ course, onSaved }: { course: Course; onSaved: () =
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Review sign-offs ------------------------------------------------------------------------
+type ReviewKind = 'expert' | 'native_uz' | 'native_ru';
+type Review = { course_id: string; kind: ReviewKind; status: 'pending' | 'changes_requested' | 'approved'; notes: string | null; updated_at: string; reviewer_id: string | null };
+const REVIEW_KINDS: { kind: ReviewKind; label: string; required: boolean }[] = [
+  { kind: 'expert', label: 'Subject-matter expert', required: true },
+  { kind: 'native_uz', label: 'Native Uzbek reviewer', required: true },
+  { kind: 'native_ru', label: 'Native Russian reviewer', required: false },
+];
+
+function CompletionReviews({ courseId, complete, onComplete }: { courseId: string; complete: boolean; onComplete: (v: boolean) => void }) {
+  const toast = useToast();
+  const { isEditor } = useAuth();
+  const reviews = useQuery({
+    queryKey: ['content-reviews', courseId],
+    queryFn: async () => must(await supabase.from('content_reviews').select('*').eq('course_id', courseId)) as Review[],
+  });
+  const byKind = (k: ReviewKind) => reviews.data?.find((r) => r.kind === k);
+  const approved = REVIEW_KINDS.filter((k) => k.required).every((k) => byKind(k.kind)?.status === 'approved');
+  const saveReview = async (kind: ReviewKind, status: Review['status'], notes: string) => {
+    const { error } = await supabase.from('content_reviews').upsert({ course_id: courseId, kind, status, notes: notes || null }, { onConflict: 'course_id,kind' });
+    if (error) return toast('error', errMsg(error));
+    toast('success', 'Review saved');
+    reviews.refetch();
+  };
+  return (
+    <div className="stack" style={{ gap: 10 }} data-testid="completion-reviews">
+      <h4 style={{ margin: 0 }}>Review &amp; completion</h4>
+      {REVIEW_KINDS.map((k) => {
+        const r = byKind(k.kind);
+        return (
+          <div key={k.kind} className="stack" style={{ gap: 4 }}>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="small">
+                {k.label}
+                {k.required ? '' : ' (optional for now)'}
+              </span>
+              <Badge tone={r?.status === 'approved' ? 'success' : r?.status === 'changes_requested' ? 'danger' : 'warning'}>{r?.status?.replace('_', ' ') ?? 'pending'}</Badge>
+            </div>
+            {isEditor && (
+              <div className="row" style={{ gap: 6 }}>
+                <Select
+                  aria-label={`${k.label} status`}
+                  value={r?.status ?? 'pending'}
+                  onChange={(e) => saveReview(k.kind, e.target.value as Review['status'], r?.notes ?? '')}
+                  data-testid={`review-${k.kind}`}>
+                  <option value="pending">Pending</option>
+                  <option value="changes_requested">Changes requested</option>
+                  <option value="approved">Approved</option>
+                </Select>
+              </div>
+            )}
+            {r?.notes && <p className="small faint" style={{ margin: 0 }}>{r.notes}</p>}
+            {r && <p className="small faint" style={{ margin: 0 }}>Updated {new Date(r.updated_at).toLocaleDateString()}</p>}
+          </div>
+        );
+      })}
+      <Switch label="Curriculum complete" checked={complete} onChange={(v) => (v && !approved ? toast('error', 'Approve the expert and native Uzbek reviews first.') : onComplete(v))} />
+      <p className="small faint" style={{ margin: 0 }}>
+        While off, learners see an “In development” notice. Turn on only when every planned lesson is published, the course meets the definition of done, and the expert and native Uzbek reviews are approved (the server enforces this).
+      </p>
     </div>
   );
 }

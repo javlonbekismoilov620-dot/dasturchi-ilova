@@ -4,7 +4,7 @@
 // cannot be answered or graded correctly.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadLibrary, orthographyIssues, structure, tr } from './content-audit-lib.mjs';
+import { courseReadiness, loadLibrary, orthographyIssues, structure, tr } from './content-audit-lib.mjs';
 
 let lib;
 const published = (rows) => rows.filter((r) => r.status === 'published');
@@ -119,10 +119,23 @@ test('published courses have published lessons, bodies for reading lessons and h
 
 test('the orthography checker itself catches planted mistakes and accepts correct text', () => {
   const flagged = (s) => orthographyIssues(s).length > 0;
-  for (const bad of ["Bu o'zbek tili", 'Maʻlumot bazasi', 'malumotlar bazasi', 'Привет dunyo', 'suniy intellekt', 'Toʼgʼri']) {
+  for (const bad of ["Bu o'zbek tili", 'Maʻlumot bazasi', 'malumotlar bazasi', 'Привет dunyo', 'suniy intellekt', 'Toʼgʼri', 'ma’lumot', 'san’at']) {
     assert.ok(flagged(bad), `should flag: ${bad}`);
   }
-  for (const good of ['Toʻgʻri javob', 'Maʼlumot va sunʼiy intellekt', 'Premium tarif', "Kod: `print('o')`", 'HTMLdagi teglar']) {
+  for (const good of ['Toʻgʻri javob', 'Maʼlumot va sunʼiy intellekt', 'Premium tarif', "Kod: `print('o')`", 'HTMLdagi teglar', 'Unreal Engine’ni oʻrnating', 'Launcher’da', 'iPhone’da']) {
     assert.ok(!flagged(good), `should accept: ${good}`);
   }
+});
+
+test('course completion checklist: no course is marked complete before it is ready', () => {
+  const problems = [];
+  const rows = [];
+  for (const c of published(lib.courses).sort((a, b) => a.title.localeCompare(b.title))) {
+    const r = courseReadiness(lib, c);
+    const failed = Object.entries(r.checks).filter(([, ok]) => !ok).map(([k]) => k);
+    rows.push(`${r.ready ? 'READY  ' : 'not yet'}  ${c.title} (${r.published} lessons)${failed.length ? ' — missing: ' + failed.join('; ') : ''}`);
+    if (c.content_complete && !r.ready) problems.push(`${c.slug} is marked complete but fails: ${failed.join('; ')}`);
+  }
+  console.log('Course readiness\n' + rows.map((x) => '  ' + x).join('\n'));
+  assert.deepEqual(problems, []);
 });
